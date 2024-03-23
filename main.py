@@ -1,50 +1,24 @@
-# fichier .run
-from backend.monte_carlo import MonteCarlo
-from backend.data.stock_data import StockData
-import matplotlib.pyplot as plt
+from WienerProcess import WienerProcess
+from maturity import Maturity
 import numpy as np
 
 if __name__ == '__main__':
+    maturity = Maturity(1) 
 
-    sj_1 = StockData(spot_price=100, volatility=0.2, dividend_yield=0.02)
-    sj_2 = StockData(spot_price=100, volatility=0.1, dividend_yield=0.015)
-    sj_3 = StockData(spot_price=100, volatility=0.4, dividend_yield=0)
+    drift = np.array([0.05, 0.03])
 
-    correlation_matrix = np.array([[1, 0.5, 0.3], [0.5, 1, 0.4], [0.3, 0.4, 1]])
+    var_cov = np.array([[1, 0.2], [0.2, 1]]) 
 
-    # Assurez-vous que votre classe MonteCarlo est mise à jour pour accepter les nouveaux paramètres
-    simulation = MonteCarlo(spots=[sj_1.spot_price, sj_2.spot_price, sj_3.spot_price],
-                            maturity=1.2,  # Assumant la même maturité pour simplification
-                            risk_free_rate=0.02,
-                            dividend_yields=[sj_1.dividend_yield, sj_2.dividend_yield, sj_3.dividend_yield],
-                            volatilities=[sj_1.volatility, sj_2.volatility, sj_3.volatility],
-                            correlation_matrix=correlation_matrix,
-                            num_simu=10000,
-                            day_conv=360,
-                            seed=10)
+    wiener_process = WienerProcess(
+        drift=drift,
+        var_cov=var_cov,
+        maturity=maturity,
+        nb_simulations=10, 
+        nb_steps=252, 
+        seed=42 
+    )
 
-    # Simuler les chemins de prix corrélés
-    sim = simulation.simulate_correlated_prices()
-
-
-    """Afficher les chemins de prix simulés pour chaque sous-jacent."""
-
-    # Obtenir le nombre de sous-jacents
-    num_subjacent = len(sim.T)
-
-    # Calculer le nombre de lignes et de colonnes pour le tableau de graphiques
-    num_rows = int(np.ceil(np.sqrt(num_subjacent)))
-    num_cols = int(np.ceil(num_subjacent / num_rows))
-
-    plt.figure(figsize=(14, 7))
-
-    # Parcourir chaque sous-jacent
-    for i, prices in enumerate(sim.T):
-        # Créer un sous-graphique pour chaque sous-jacent
-        plt.subplot(num_rows, num_cols, i + 1)
-        for path in prices:
-            plt.plot(path)
-        plt.title(f'Chemins de prix simulés pour le sous-jacent {i + 1}')
-
-    plt.tight_layout()
-    plt.show()
+    #results = wiener_process.simul()
+    #print(wiener_process.__z)
+    #print(wiener_process.simul(use_dataframe= True))
+    wiener_process.plot_simulations()
