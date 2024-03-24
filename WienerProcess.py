@@ -16,9 +16,10 @@ class WienerProcess:
         self.__drift = drift
         self.__var_cov = var_cov
         self.__maturity = maturity
-        self.__nb_simulations = nb_simulations
+        self.nb_simulations = nb_simulations
         self.__nb_steps = nb_steps
         self.__seed = seed
+        self.nb_actifs = var_cov.shape[0] 
         self.__z = None
         self.__dt = None
         self.__rdmts = None
@@ -37,37 +38,35 @@ class WienerProcess:
                 np.random.seed(self.__seed)
             self.__dt = self.__maturity.maturity() / self.__nb_steps
             mean = np.zeros(len(self.__drift))  # Moyenne des distributions
-            self.__z = np.random.multivariate_normal(mean, self.__var_cov, (self.__nb_simulations, self.__nb_steps)) * np.sqrt(self.__dt)
+            self.__z = np.random.multivariate_normal(mean, self.__var_cov, (self.nb_simulations, self.__nb_steps)) * np.sqrt(self.__dt)
 
-    def simul(self, use_dataframe: bool = False):
+    def simul(self):
 
         drift_per_step = self.__drift * self.__dt
-        drift_adjustment = np.repeat(drift_per_step[np.newaxis, :], self.__nb_simulations, axis=0)
+        drift_adjustment = np.repeat(drift_per_step[np.newaxis, :], self.nb_simulations, axis=0)
         drift_adjustment = np.repeat(drift_adjustment[:, np.newaxis, :], self.__nb_steps, axis=1)
     
         self.__rdmts = self.__z + drift_adjustment
         
-        self.__price = np.exp(np.cumsum(self.__rdmts, axis=1)) * 100
+        # Calcul initial des prix basés sur les rendements cumulatifs
+        initial_prices = np.exp(np.cumsum(self.__rdmts, axis=1))
+
+        # Normalisation des prix pour que le premier prix soit égal à 100
+        self.__price = (initial_prices / initial_prices[:, 0, np.newaxis]) * 100
         
-        if use_dataframe:
-            dataframes = []
-            col = [f'Simulation {i+1}' for i in range(self.__nb_simulations)]
-            for actif_index in range(self.__price.shape[2]):
-                # Extraire les données pour chaque actif et créer un DataFrame
-                df = pd.DataFrame(self.__price[:, :, actif_index].T, columns=col)
-                df.index = np.arange(1, self.__nb_steps + 1) * self.__dt
-                df.index.name = 'Time'
-                dataframes.append(df)
-            return dataframes
-        else:
-            return self.__price
+        dataframes = []
+        col = [f'Simulation {i+1}' for i in range(self.nb_simulations)]
+        for actif_index in range(self.__price.shape[2]):
+            # Extraire les données pour chaque actif et créer un DataFrame
+            df = pd.DataFrame(self.__price[:, :, actif_index].T, columns=col)
+            df.index = np.arange(1, self.__nb_steps + 1) * self.__dt
+            df.index.name = 'Time'
+            dataframes.append(df)
+        return dataframes
     
     def plot_simulations(self):
-        data = self.simul(use_dataframe=True)
-        nb_actifs = len(data) # Nombre d'actifs, c'est-à-dire la dernière dimension de data
-        
-        # Itérer à travers chaque actif pour créer un graphique distinct
-        # Itérer à travers chaque DataFrame (actif) pour créer un graphique distinct
+        data = self.simul()
+
         for actif_index, df in enumerate(data):
             plt.figure(figsize=(10, 6))
             # Tracer chaque simulation pour l'actif courant
