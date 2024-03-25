@@ -15,14 +15,14 @@ if __name__ == '__main__':
         var_cov=var_cov,
         maturity=maturity,
         nb_simulations=2, 
-        nb_steps=5, 
+        nb_steps=20, 
         seed=47
     )
     # Paramètres pour l'Autocall
     nominal = 1000  # Montant nominal de la note
     coupon_rate = 0.06  # Taux de coupon, par exemple 6%
     coupon_barrier = 1.1  # Barrière de coupon, par exemple 100% du prix initial
-    autocall_barrier = 1.15  # Barrière d'autocall, par exemple 120% du prix initial
+    autocall_barrier = 1.40  # Barrière d'autocall, par exemple 120% du prix initial
     risk_free = 0.03
     # Création d'une instance d'Autocall
     autocall = Autocall(
@@ -34,13 +34,8 @@ if __name__ == '__main__':
         risk_free = risk_free
     )
 
-
-    #print(autocall.generate_payoffs())
-    #print(wiener_process.simul())
-    #wiener_process.plot_simulations()
-    #autocall.print_total_payments()
-    #autocall.generate_payoffs()
-    #print(autocall.generate_payoff_dataframes())
-    #autocall.print_payoff_dataframes()
-    print(autocall.calculate_average_present_value())
+    wiener_process.simul()
+    autocall.plot_simulations()
+    autocall.print_payoff_dataframes()
+    autocall.calculate_average_present_value()
 

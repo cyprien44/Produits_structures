@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+
 
 class WienerProcess:
     
@@ -24,6 +24,7 @@ class WienerProcess:
         self.__dt = None
         self.__rdmts = None
         self.__price = None
+        self.dataframes = None
         
         # Vérifier la cohérence de var_cov et drift
         if var_cov.shape[0] != len(drift):
@@ -62,20 +63,10 @@ class WienerProcess:
             df.index = np.arange(1, self.__nb_steps + 1) * self.__dt
             df.index.name = 'Time'
             dataframes.append(df)
+
+        self.dataframes = dataframes
+
         return dataframes
     
-    def plot_simulations(self):
-        data = self.simul()
-
-        for actif_index, df in enumerate(data):
-            plt.figure(figsize=(10, 6))
-            # Tracer chaque simulation pour l'actif courant
-            for sim_index in df.columns:
-                plt.plot(df.index, df[sim_index], lw=1)
-            
-            plt.title(f'Wiener Process Simulation for Asset {actif_index + 1}')
-            plt.xlabel('Time')
-            plt.ylabel('Process Value')
-            plt.grid(True)
-            plt.show()
+    
 

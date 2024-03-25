@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 import math
 from WienerProcess import WienerProcess
 
@@ -43,17 +44,24 @@ class Autocall:
                 price = df.loc[observation_date,:]
                 price_ratio = price / df.iloc[0,:]
 
-                coupon_condition = price_ratio >= self.coupon_barrier
-                autocall_condition = price_ratio >= self.autocall_barrier
 
                 # Pour le max_price_ratio, exclure l'observation date actuelle si ce n'est pas la première date
                 if observation_date_index > 0:
-                    max_price_ratio = df.iloc[:observation_date_index].max() / df.iloc[0]
+                    max_price_ratio = df.iloc[:observation_date_index,:].max() / df.iloc[0,:]
                 else:
                     # Si c'est la première date, utiliser simplement la valeur actuelle
                     max_price_ratio = price_ratio
-                    
+
+                coupon_condition = price_ratio >= self.coupon_barrier
+                autocall_condition = price_ratio >= self.autocall_barrier
                 redemption_condition = max_price_ratio <= self.autocall_barrier
+                
+                
+                # à la maturité on doit rendre le nominal meme si autocal_condition n'est pas rempli
+                if observation_date_index == (len(df.index) - 1):
+                    for i in range(len(redemption_condition)):
+                        if bool(redemption_condition[i]):
+                            redemption_condition.iloc[i] = autocall_condition.iloc[i] = True
 
                 coupon_payment = self.nominal * self.coupon_rate * coupon_condition * redemption_condition
                 redemption_payment = self.nominal * autocall_condition * redemption_condition
@@ -98,9 +106,31 @@ class Autocall:
                 print("\n")
             else:
                 print(f"Aucun payoff pour l'actif {i+1}.")
+
+    def plot_simulations(self):
+
+        for actif_index, df in enumerate(self.wiener_process.dataframes):
+            plt.figure(figsize=(10, 6))
+            
+            # Tracer chaque simulation pour l'actif courant
+            for sim_index in df.columns:
+                plt.plot(df.index, df[sim_index], lw=1)
+            
+            # Ajouter une ligne horizontale pour la barrière de coupon
+            plt.axhline(y= self.coupon_barrier * 100, color='g', linestyle='--', label=f'Coupon Barrier ({round(self.coupon_barrier*100,1)}%)')
+            
+            # Ajouter une ligne horizontale pour la barrière d'autocall
+            plt.axhline(y= self.autocall_barrier * 100, color='r', linestyle='--', label=f'Autocall Barrier ({round(self.autocall_barrier*100,1)}%)')
+            
+            plt.title(f'Wiener Process Simulation for Asset {actif_index + 1}')
+            plt.xlabel('Time')
+            plt.ylabel('Process Value')
+            plt.legend()  # Affiche la légende
+            plt.grid(True)
+            plt.show()
+    
     
     def calculate_average_present_value(self):
-
         if not self.payoff_dataframes:  # Si les DataFrames ne sont pas encore générés
             self.generate_payoff_dataframes()
 
@@ -111,9 +141,13 @@ class Autocall:
                 discounted_df = df.apply(lambda x: x * self.discount_factor(x.name), axis=1)
                 # Calculer la somme des valeurs actualisées pour obtenir le total actualisé par simulation
                 total_discounted = discounted_df.sum()
-                print(total_discounted)
                 # Ajouter la somme des paiements actualisés pour cette DataFrame à la liste
                 price_by_simul.append(total_discounted)  # Ajoute la somme totale de tous les paiements actualisés de cette DataFrame
                 average_price.append(np.mean(total_discounted))
 
-        return average_price
+        # Imprimer les résultats de manière plus claire
+        for i, value in enumerate(average_price):
+            print(f"Prix moyen final pour l'actif {i+1}: {value:.2f}")
+            
+        overall_average = np.mean(average_price)
+        print(f"Prix moyen final sur tous les actifs: {overall_average:.2f}")
