@@ -15,7 +15,7 @@ class Autocall:
         return np.exp(-self.risk_free * time_step)
 
     def generate_payoffs(self):
-        paths = self.monte_carlo
+        paths = self.monte_carlo.simulations 
         num_steps = paths.shape[0]
         num_simulations = paths.shape[1]
 

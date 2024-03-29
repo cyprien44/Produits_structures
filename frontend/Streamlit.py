@@ -72,7 +72,7 @@ st.markdown("""
 if st.button("Simuler les chemins de prix"):
     correlation_matrix = np.eye(num_subjacent)
     simulation = MonteCarlo(spots, maturity, risk_free_rate, dividend_yields, volatilities, correlation_matrix, num_simu=num_simu, seed=seed)
-    sim = simulation.simulate_correlated_prices()
+    sim = simulation.simulate_prices()  # Corrigé ici
 
     # Ajustez les dimensions ici, par exemple en augmentant la hauteur
     plt.figure(figsize=(14, num_subjacent * 5))  # Augmentez la hauteur pour moins d'aplatissement
