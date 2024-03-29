@@ -20,25 +20,22 @@ if __name__ == '__main__':
                             dividend_yields=[sj_1.dividend_yield, sj_2.dividend_yield, sj_3.dividend_yield],
                             volatilities=[sj_1.volatility, sj_2.volatility, sj_3.volatility],
                             correlation_matrix=correlation_matrix,
-                            num_simu=3,
-                            day_conv= 4,#360,
-                            seed=14)
+                            num_simu=2,
+                            day_conv= 5,#360,
+                            seed=13)
 
-
-    
-    
     # Simulation de Monte Carlo (peut avoir été réalisée auparavant)
-    simulated_prices = montecarlo.simulate_prices()
-    print(simulated_prices.T)
+    montecarlo.simulate_prices()
+    montecarlo.print_simulation_dataframes()
     # Paramètres hypothétiques pour l'initialisation d'Autocall
     nominal_value = 1000  # La valeur nominale du produit structuré
     coupon_rate = 0.05  # Taux de coupon, par exemple 5%
-    coupon_barrier = 1.05  # Barrière de coupon, par exemple 110%
-    autocall_barrier = 1.3  # Barrière d'autocall, par exemple 120%
+    coupon_barrier = 1.1  # Barrière de coupon, par exemple 110%
+    autocall_barrier = 1.2  # Barrière d'autocall, par exemple 120%
     risk_free_rate = 0.02  # Taux sans risque
 
     # Initialisation d'Autocall avec l'objet MonteCarlo
-    autocall_product = Autocall(
+    autocall = Autocall(
         monte_carlo = montecarlo,
         nominal=nominal_value,
         coupon_rate=coupon_rate,
@@ -48,17 +45,13 @@ if __name__ == '__main__':
     )
 
     # Génération des payoffs
-    autocall_product.generate_payoffs()
-
-    print(autocall_product.payoffs)
+    autocall.generate_payoffs()
+    autocall.print_payoffs_dataframes()
 
     # Calcul du payoff moyen
-    average_payoff = autocall_product.calculate_average_payoff()
-    print(f"Le payoff moyen est: {average_payoff}")
+    #average_payoff = autocall.calculate_average_payoff()
+    #print(f"Le payoff moyen est: {average_payoff}")
 
-
-
-    
     ''''
     """Afficher les chemins de prix simulés pour chaque sous-jacent."""
 

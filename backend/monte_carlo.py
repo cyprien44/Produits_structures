@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 class MonteCarlo:
     """
@@ -55,4 +56,34 @@ class MonteCarlo:
             )
         return simu
     
+    def simulations_to_dataframes(self):
+        """
+        Converts simulation results into a list of DataFrames, one for each asset.
+        Steps become the index and simulations become the columns.
+        """
+        # Assuming simulations have been run and self.simulations is populated
+        dataframes = []
+        for asset_index in range(self.simulations.shape[2]):
+            # Extract simulation data for this asset
+            asset_data = self.simulations[:, :, asset_index]
+            
+            # Create DataFrame: Steps as index, Simulations as columns
+            df = pd.DataFrame(asset_data)
+            df.index = [f'Step {step+1}' for step in range(self.num_time_steps + 1)]
+            df.columns = [f'Simulation {sim+1}' for sim in range(self.num_simu)]
+            
+            dataframes.append(df)
+        
+        return dataframes
+    
+    def print_simulation_dataframes(self):
+        """Print all simulation DataFrames sequentially."""
+        # Generate DataFrames from simulations
+        dataframes = self.simulations_to_dataframes()
+
+        # Iterate over each DataFrame and print it
+        for i, df in enumerate(dataframes):
+            print(f"Simulation DataFrame for Asset {i+1}:")
+            print(df)
+            print("\n" + "-"*50 + "\n")
 
