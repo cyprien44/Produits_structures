@@ -39,6 +39,7 @@ class Autocall:
         dataframes = self.wiener_process.simul()
         
         for actif_index, df in enumerate(dataframes):
+            
             for observation_date_index, observation_date in enumerate(df.index):
                 # Calculer le coupon et le redemption à chaque date d'observation
                 price = df.loc[observation_date,:]

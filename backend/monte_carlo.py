@@ -53,19 +53,12 @@ class MonteCarlo:
             simu[t] = simu[t-1] * np.exp(
                 (self.risk_free_rate - self.dividend_yields - 0.5 * self.volatilities**2)
                 * dt + self.volatilities * self.z[t-1]
-            )
-        return simu
-    
-    def simulations_to_dataframes(self):
-        """
-        Converts simulation results into a list of DataFrames, one for each asset.
-        Steps become the index and simulations become the columns.
-        """
+            )   
         # Assuming simulations have been run and self.simulations is populated
         dataframes = []
-        for asset_index in range(self.simulations.shape[2]):
+        for asset_index in range(simu.shape[2]):
             # Extract simulation data for this asset
-            asset_data = self.simulations[:, :, asset_index]
+            asset_data = simu[:, :, asset_index]
             
             # Create DataFrame: Steps as index, Simulations as columns
             df = pd.DataFrame(asset_data)
@@ -79,7 +72,7 @@ class MonteCarlo:
     def print_simulation_dataframes(self):
         """Print all simulation DataFrames sequentially."""
         # Generate DataFrames from simulations
-        dataframes = self.simulations_to_dataframes()
+        dataframes = self.simulations
 
         # Iterate over each DataFrame and print it
         for i, df in enumerate(dataframes):

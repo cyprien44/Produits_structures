@@ -9,55 +9,58 @@ class Autocall:
         self.coupon_barrier = coupon_barrier
         self.autocall_barrier = autocall_barrier
         self.risk_free = risk_free
-        self.payoffs = []
-        self.payoffs_discount = []
+        self.payoffs, self.payoffs_discount = self.generate_payoffs()
 
-    def discount_factor(self, time_step):
-        return np.exp(-self.risk_free * time_step)
+
+    def discount_factor(self, step, total_steps):
+        time = step / total_steps * self.monte_carlo.maturity  # Convertir en fraction de la maturité totale
+        return np.exp(-self.risk_free * time)
+
 
     def generate_payoffs(self):
-        paths = self.monte_carlo.simulations
-        num_steps = paths.shape[0]
-        num_simulations = paths.shape[1]
-        num_actifs = paths.shape[2]
 
         payoffs_dataframes = []
         discounted_payoffs_dataframes = []
 
-        for actif_index in range(num_actifs):
+        for actif_index, df in enumerate(self.monte_carlo.simulations):
+            num_steps = df.shape[0]
+            num_simulations = df.shape[1]
+
             payoffs_actif = np.zeros((num_steps, num_simulations))
             discounted_payoffs_actif = np.zeros((num_steps, num_simulations))
 
-            for step in range(num_steps):
-                current_prices = paths[step, :, actif_index]
-                price_ratios = current_prices / paths[0, :, actif_index]
+            for step, time_step in enumerate(df.index):
+                current_prices = df.iloc[step].values
+                initial_prices = df.iloc[0].values
+                price_ratios = current_prices / initial_prices
 
                 coupon_condition = price_ratios >= self.coupon_barrier
                 autocall_condition = price_ratios >= self.autocall_barrier
-                max_price_ratios = np.maximum.accumulate(price_ratios, axis=0)
+                max_price_ratios = df.iloc[:step].max(axis=0) / initial_prices
                 redemption_condition = max_price_ratios <= self.autocall_barrier
 
-                if step == num_steps - 1:
-                    redemption_condition = np.ones_like(redemption_condition, dtype=bool)
+                if step == (len(df.index) - 1):
+                    for i in range(len(redemption_condition)):
+                        if bool(redemption_condition[i]):
+                            redemption_condition[i] = autocall_condition[i] = True
 
                 coupon_payment = self.nominal * self.coupon_rate * coupon_condition * redemption_condition
                 redemption_payment = self.nominal * autocall_condition * redemption_condition
                 total_payment = coupon_payment + redemption_payment
 
                 payoffs_actif[step, :] = total_payment
-                discount = self.discount_factor(step / num_steps)
-                discounted_payoffs_actif[step, :] = total_payment * discount
+                discount = self.discount_factor(step, num_steps)
+                discounted_payoffs_actif[step, :] = (total_payment * discount)
 
-            columns = [f'Simulation {i+1}' for i in range(num_simulations)]
-            df_payoffs = pd.DataFrame(payoffs_actif, index=[f'Step {step+1}' for step in range(num_steps)], columns=columns)
-            df_discounted_payoffs = pd.DataFrame(discounted_payoffs_actif, index=[f'Step {step+1}' for step in range(num_steps)], columns=columns)
+            df_payoffs = pd.DataFrame(payoffs_actif, index=df.index, columns=[f'Simulation {sim+1}' for sim in range(num_simulations)])
+            df_discounted_payoffs = pd.DataFrame(discounted_payoffs_actif, index=df.index, columns=[f'Simulation {sim+1}' for sim in range(num_simulations)])
+            
             payoffs_dataframes.append(df_payoffs)
             discounted_payoffs_dataframes.append(df_discounted_payoffs)
 
-        self.payoffs = payoffs_dataframes
-        self.payoffs_discount = discounted_payoffs_dataframes
-
         return payoffs_dataframes, discounted_payoffs_dataframes
+
+
     
     def print_payoffs_dataframes(self):
         """
