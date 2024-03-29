@@ -29,7 +29,7 @@ class MonteCarlo:
         self.delta_t = maturity / day_conv
         self.seed = seed
         self.generate_correlated_shocks()
-        self.simulations = self.simulate_correlated_prices()
+        self.simulations = self.simulate_prices()
 
     def generate_correlated_shocks(self):
         """
@@ -41,7 +41,7 @@ class MonteCarlo:
         z_uncorrelated = np.random.normal(0.0, 1.0, (self.num_time_steps, self.num_simu, len(self.spots))) * self.delta_t ** 0.5
         self.z = np.einsum('ij, tkj -> tki', L, z_uncorrelated)
 
-    def simulate_correlated_prices(self):
+    def simulate_prices(self):
         """
         Simule les chemins de prix pour tous les sous-jacents en utilisant les chocs corrélés.
         """

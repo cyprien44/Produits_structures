@@ -1,6 +1,6 @@
-from Cyprien.WienerProcess import WienerProcess
-from Cyprien.autocall import Autocall
-from Cyprien.maturity import Maturity
+from WienerProcess import WienerProcess
+from autocall import Autocall
+from maturity import Maturity
 import numpy as np
 
 if __name__ == '__main__':

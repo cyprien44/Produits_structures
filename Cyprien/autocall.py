@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import math
-from Cyprien.WienerProcess import WienerProcess
+from WienerProcess import WienerProcess
 
 class Autocall:
     def __init__(
