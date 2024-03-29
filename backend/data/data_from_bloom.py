@@ -1,3 +1,8 @@
+# Pour utiliser xbbg sur les postes de l'école voir : https://pypi.org/project/xbbg/
+# pip install blpapi --index-url=https://bcms.bloomberg.com/pip/simple/
+# Puis
+# pip install xbbg
+
 from xbbg import blp
 from datetime import datetime, timedelta
 
@@ -14,20 +19,20 @@ def get_data_rate():
     data_json = data.to_json()
 
     # Enregistrer le JSON sur votre PC
-    with open('data.json', 'w') as f:
+    with open('rate.json', 'w') as f:
         f.write(data_json)
 
 def get_data_options():
     tickers = ['AAPL US Equity', 'MSFT US Equity', 'GOOGL US Equity']
 
     # Récupérer les données de Bloomberg
-    data = blp.bdp(tickers, ['OPT_CHAIN'], END_DT='20340301')
-
+    data = blp.bds(tickers, ['OPT_CHAIN'], END_DT='20340301')
+    data = blp.bdh(data['security_description'], ['Last_Price'], start_date='20240301', end_date='20240301')
     # Convertir les données en JSON
     data_json = data.to_json()
 
     # Enregistrer le JSON sur votre PC
-    with open('data.json', 'w') as f:
+    with open('option.json', 'w') as f:
         f.write(data_json)
 
 def get_data_stock():
@@ -64,5 +69,5 @@ def get_data_stock():
 
 
 get_data_rate()
-get_data_stock()
+#get_data_stock()
 get_data_options()
