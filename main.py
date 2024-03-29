@@ -15,14 +15,14 @@ if __name__ == '__main__':
 
     # Assurez-vous que votre classe MonteCarlo est mise à jour pour accepter les nouveaux paramètres
     montecarlo = MonteCarlo(spots=[sj_1.spot_price, sj_2.spot_price, sj_3.spot_price],
-                            maturity=1.2,  # Assumant la même maturité pour simplification
+                            maturity=1, #1.2,  # Assumant la même maturité pour simplification
                             risk_free_rate=0.02,
                             dividend_yields=[sj_1.dividend_yield, sj_2.dividend_yield, sj_3.dividend_yield],
                             volatilities=[sj_1.volatility, sj_2.volatility, sj_3.volatility],
                             correlation_matrix=correlation_matrix,
                             num_simu=3,
-                            day_conv=360,
-                            seed=10)
+                            day_conv= 4,#360,
+                            seed=14)
 
 
     
@@ -33,8 +33,8 @@ if __name__ == '__main__':
     # Paramètres hypothétiques pour l'initialisation d'Autocall
     nominal_value = 1000  # La valeur nominale du produit structuré
     coupon_rate = 0.05  # Taux de coupon, par exemple 5%
-    coupon_barrier = 1.1  # Barrière de coupon, par exemple 110%
-    autocall_barrier = 1.2  # Barrière d'autocall, par exemple 120%
+    coupon_barrier = 1.05  # Barrière de coupon, par exemple 110%
+    autocall_barrier = 1.3  # Barrière d'autocall, par exemple 120%
     risk_free_rate = 0.02  # Taux sans risque
 
     # Initialisation d'Autocall avec l'objet MonteCarlo
@@ -48,7 +48,9 @@ if __name__ == '__main__':
     )
 
     # Génération des payoffs
-    payoffs = autocall_product.generate_payoffs()
+    autocall_product.generate_payoffs()
+
+    print(autocall_product.payoffs)
 
     # Calcul du payoff moyen
     average_payoff = autocall_product.calculate_average_payoff()
