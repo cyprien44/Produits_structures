@@ -21,12 +21,12 @@ if __name__ == '__main__':
                             volatilities=[sj_1.volatility, sj_2.volatility, sj_3.volatility],
                             correlation_matrix=correlation_matrix,
                             num_simu=2,
-                            day_conv= 5,#360,
+                            day_conv= 20,
                             seed=13)
 
     # Simulation de Monte Carlo (peut avoir été réalisée auparavant)
     montecarlo.simulate_prices()
-    montecarlo.print_simulation_dataframes()
+    #montecarlo.print_simulation_dataframes()
     # Paramètres hypothétiques pour l'initialisation d'Autocall
     nominal_value = 1000  # La valeur nominale du produit structuré
     coupon_rate = 0.05  # Taux de coupon, par exemple 5%
@@ -45,12 +45,11 @@ if __name__ == '__main__':
     )
 
     # Génération des payoffs
-    autocall.generate_payoffs()
+    autocall.plot_simulations()
     autocall.print_payoffs_dataframes()
 
     # Calcul du payoff moyen
-    #average_payoff = autocall.calculate_average_payoff()
-    #print(f"Le payoff moyen est: {average_payoff}")
+    autocall.print_average_present_values()
 
     ''''
     """Afficher les chemins de prix simulés pour chaque sous-jacent."""
