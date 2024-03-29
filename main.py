@@ -1,14 +1,13 @@
 # fichier .run
 from backend.monte_carlo import MonteCarlo
 from backend.data.stock_data import StockData
-from backend.data.rate_curve import ZeroCouponCurve
 import matplotlib.pyplot as plt
 import numpy as np
 
 if __name__ == '__main__':
 
-    sj_1 = StockData(spot_price=170, strike=180, ticker='AAPL', maturity_date='2025-09-19')
-    '''sj_2 = StockData(spot_price=100, volatility=0.1, dividend_yield=0.015)
+    sj_1 = StockData(spot_price=100, volatility=0.2, dividend_yield=0.02)
+    sj_2 = StockData(spot_price=100, volatility=0.1, dividend_yield=0.015)
     sj_3 = StockData(spot_price=100, volatility=0.4, dividend_yield=0)
 
     correlation_matrix = np.array([[1, 0.5, 0.3], [0.5, 1, 0.4], [0.3, 0.4, 1]])
@@ -48,28 +47,4 @@ if __name__ == '__main__':
         plt.title(f'Chemins de prix simulés pour le sous-jacent {i + 1}')
 
     plt.tight_layout()
-    plt.show()'''
-
-    '''volatility = sj_1.volatility
-
-    # Tracer le smile de volatilité pour les puts
-    plt.plot(volatility['strike'], volatility['implied_Volatility'], 'o', label='Volatilité implicite')
-
-    plt.xlabel('Strike Price')
-    plt.ylabel('Implied Volatility')
-    plt.title('Volatility Smile')
-    plt.legend()
     plt.show()
-
-    print(sj_1.dividend_yield)'''
-
-    # Calculer les taux zéro coupon
-    curve_builder = ZeroCouponCurve({
-            '13W': '^IRX',
-            '5Y': '^FVX',
-            '10Y': '^TNX',
-            '30Y': '^TYX'
-        })
-    zero_coupon_rates = curve_builder.plot_curve()
-
-
