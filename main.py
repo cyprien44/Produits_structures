@@ -1,6 +1,7 @@
 # fichier .run
 from backend.monte_carlo import MonteCarlo
 from backend.data.stock_data import StockData
+from backend.models import price_autocall
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -19,14 +20,15 @@ if __name__ == '__main__':
                             dividend_yields=[sj_1.dividend_yield, sj_2.dividend_yield, sj_3.dividend_yield],
                             volatilities=[sj_1.volatility, sj_2.volatility, sj_3.volatility],
                             correlation_matrix=correlation_matrix,
-                            num_simu=10000,
+                            num_simu=4,
                             day_conv=360,
                             seed=10)
 
     # Simuler les chemins de prix corrélés
     sim = simulation.simulate_correlated_prices()
 
-
+    #print(sim.T)
+    
     """Afficher les chemins de prix simulés pour chaque sous-jacent."""
 
     # Obtenir le nombre de sous-jacents
@@ -48,3 +50,4 @@ if __name__ == '__main__':
 
     plt.tight_layout()
     plt.show()
+

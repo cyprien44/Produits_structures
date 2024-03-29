@@ -54,3 +54,5 @@ class MonteCarlo:
                 * dt + self.volatilities * self.z[t-1]
             )
         return simu
+    
+

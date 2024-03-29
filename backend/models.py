@@ -1,5 +1,6 @@
 # formules des payoffs etc
 
+
 def price_autocall(self):
     """
     Calcule le prix d'un produit autocallable en utilisant les chemins de prix simulés.
