@@ -1,26 +1,37 @@
 from backend.monte_carlo import MonteCarlo
 from backend.data.stock_data import StockData
 from backend.data.rate_curve import ZeroCouponCurve
+from backend.data.volatility import Volatility
+from backend.data.correlation import *
 import matplotlib.pyplot as plt
 import numpy as np
 
 if __name__ == '__main__':
-    # Test
-    taux_us = ZeroCouponCurve(date='20240301')
-    taux_us.plot_rate_curve()
+    # Pour notre cas, nous prenons en date de départ le 2024-03-01 et en date de fin le 2034-03-01
 
-    sj_1 = StockData(spot_price=170, strike=180, ticker='AAPL', maturity_date='2025-09-19')
-    '''sj_2 = StockData(spot_price=100, volatility=0.1, dividend_yield=0.015)
-    sj_3 = StockData(spot_price=100, volatility=0.4, dividend_yield=0)
+    # Récupération de la courbe des taux
+    US_rate = ZeroCouponCurve(date='20240301')
+    #US_rate.plot_rate_curve()
 
-    correlation_matrix = np.array([[1, 0.5, 0.3], [0.5, 1, 0.4], [0.3, 0.4, 1]])
+    # Récupération des données des sous-jacents
+    Apple = StockData(ticker='AAPL US Equity')
+    Microsoft = StockData(ticker='MSFT US Equity')
+    Google = StockData(ticker='GOOGL US Equity')
+
+    # Récupération des corrélations
+    correlation_matrix = get_correlation()
+
+    # Récupération des volatilités implicites (pas terminé !!!!)
+    #Apple_volatility = Volatility(stock=Apple, maturity_date='20340301', rate=US_rate.data, dividend_yield=Apple.dividend_yield)
+
 
     # Assurez-vous que votre classe MonteCarlo est mise à jour pour accepter les nouveaux paramètres
-    simulation = MonteCarlo(spots=[sj_1.spot_price, sj_2.spot_price, sj_3.spot_price],
-                            maturity=1.2,  # Assumant la même maturité pour simplification
-                            risk_free_rate=0.02,
-                            dividend_yields=[sj_1.dividend_yield, sj_2.dividend_yield, sj_3.dividend_yield],
-                            volatilities=[sj_1.volatility, sj_2.volatility, sj_3.volatility],
+    simulation = MonteCarlo(spots=[Apple.spot_price, Microsoft.spot_price, Google.spot_price],
+                            start_date="2024-03-01",
+                            end_date="2025-03-01",
+                            risk_free_rate=US_rate.data.iloc[0,0],
+                            dividend_yields=[Apple.dividend_yield, Microsoft.dividend_yield, Google.dividend_yield],
+                            volatilities=[0.2, 0.1, 0.15],
                             correlation_matrix=correlation_matrix,
                             num_simu=10000,
                             day_conv=360,
@@ -50,7 +61,7 @@ if __name__ == '__main__':
         plt.title(f'Chemins de prix simulés pour le sous-jacent {i + 1}')
 
     plt.tight_layout()
-    plt.show()'''
+    plt.show()
 
     '''volatility = sj_1.volatility
 

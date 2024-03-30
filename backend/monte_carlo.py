@@ -1,10 +1,11 @@
 import numpy as np
+from datetime import datetime
 
 class MonteCarlo:
     """
     Classe Monte Carlo pour évaluer le prix de produits autocallables.
     """
-    def __init__(self, spots, maturity, risk_free_rate, dividend_yields, volatilities,
+    def __init__(self, spots, start_date, end_date, risk_free_rate, dividend_yields, volatilities,
                  correlation_matrix, num_simu=10000, day_conv=360, seed=None):
         """
         Initialisation de la classe Monte Carlo pour un nombre quelconque de sous-jacents.
@@ -19,14 +20,16 @@ class MonteCarlo:
         :param day_conv: Nombre de jours de trading par an.
         """
         self.spots = np.array(spots)
-        self.maturity = maturity
+        self.start_date = datetime.strptime(start_date, "%Y-%m-%d")
+        self.end_date = datetime.strptime(end_date, "%Y-%m-%d")
+        self.maturity = (self.end_date - self.start_date).days / 365
         self.risk_free_rate = risk_free_rate
         self.dividend_yields = np.array(dividend_yields)
         self.volatilities = np.array(volatilities)
-        self.correlation_matrix = np.array(correlation_matrix)
+        self.correlation_matrix = correlation_matrix
         self.num_simu = num_simu
-        self.num_time_steps = int(maturity * day_conv)
-        self.delta_t = maturity / day_conv
+        self.num_time_steps = int(self.maturity * day_conv)
+        self.delta_t = self.maturity / day_conv
         self.seed = seed
         self.generate_correlated_shocks()
         self.simulations = self.simulate_correlated_prices()

@@ -69,5 +69,5 @@ def get_data_stock():
 
 
 get_data_rate()
-#get_data_stock()
+get_data_stock()
 get_data_options()

@@ -45,7 +45,7 @@ class ZeroCouponCurve:
         # Remplacer les colonnes du DataFrame
         df.columns = new_columns
 
-        return df
+        return df/100
 
     def plot_rate_curve(self):
         """
