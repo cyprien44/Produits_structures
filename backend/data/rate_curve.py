@@ -1,61 +1,59 @@
 import pandas as pd
-import numpy as np
-import yfinance as yf
-from scipy.interpolate import interp1d
+import re
+from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 
 class ZeroCouponCurve:
-    def __init__(self, tickers):
+    def __init__(self, date='20240301'):
         """
         Initialisation avec les tickers des bons du Trésor américain pour différentes maturités.
         """
-        self.tickers = {self.ticker_to_years(ticker): symbol for ticker, symbol in tickers.items()}
+        self.date = date
+        self.data = self.get_data_from_json()
 
-    @staticmethod
-    def ticker_to_years(ticker):
-        if 'W' in ticker:
-            # Convertir les semaines en années
-            return int(ticker.replace('W', '')) / 52
-        elif 'M' in ticker:
-            # Convertir les mois en années
-            return int(ticker.replace('M', '')) / 12
-        elif 'Y' in ticker:
-            # Convertir les années en années
-            return int(ticker.replace('Y', ''))
-        else:
-            raise ValueError(f"Le format du ticker {ticker} n'est pas reconnu.")
+    def get_data_from_json(self):
+        """
+        Récupère les données de Bloomberg pour les bons du Trésor américain.
+        """
+        df = pd.read_json('rate.json')
 
-    def fetch_data(self):
-        """
-        Récupère les taux d'intérêt pour les bons du Trésor américain.
-        """
-        data = yf.download(list(self.tickers.values()), period="1d")['Adj Close']
-        data.columns = self.tickers.keys()  # Renommer les colonnes pour correspondre aux maturités
-        return data
+        start_date = datetime.strptime(self.date, '%Y%m%d')
 
-    def build_curve(self):
-        """
-        Construit la courbe des taux zéro coupon à partir des taux d'intérêt des bons du Trésor.
-        """
-        rates = self.fetch_data()
-        # Convertir les taux en base annuelle et calculer les taux zéro coupon comme exemple simplifié
-        # Dans la pratique, cette conversion dépendrait de la spécificité des instruments et de leur prix
-        zero_coupon_curve = rates / 100
-        return zero_coupon_curve
+        new_columns = []
 
-    def plot_curve(self):
-        """
-        Trace la courbe des taux zéro coupon en utilisant uniquement les points originaux.
-        """
-        zero_coupon_curve = self.build_curve()
+        for col in df.columns:
+            # Extraire la partie numérique et l'unité de temps
+            match = re.match(r"\('S0023Z (\d+)([DWMY]) BLC2 Curncy', 'Last_Price'\)", col)
+            if match:
+                number, unit = match.groups()
+                number = int(number)
 
+                # Calculer la nouvelle date en fonction de l'unité de temps
+                if unit == 'D':
+                    new_date = start_date + timedelta(days=number)
+                elif unit == 'W':
+                    new_date = start_date + timedelta(weeks=number)
+                elif unit == 'M':
+                    new_date = start_date + pd.DateOffset(months=number)
+                elif unit == 'Y':
+                    new_date = start_date + pd.DateOffset(years=number)
+
+                new_columns.append(new_date)
+            else:
+                new_columns.append(col)
+
+        # Remplacer les colonnes du DataFrame
+        df.columns = new_columns
+
+        return df
+
+    def plot_rate_curve(self):
+        """
+        Tracer la courbe des taux.
+        """
         plt.figure(figsize=(10, 6))
-
-        # Loop over each column in the DataFrame
-        plt.plot(zero_coupon_curve.columns, zero_coupon_curve.values[0], 'o-', label='Taux')
-
-        plt.title('Zero Coupon Curve Over Time')
+        plt.plot(self.data.columns, self.data.values[0])
+        plt.title('Courbe des taux')
         plt.xlabel('Date')
-        plt.ylabel('Yield (%)')
-        plt.legend()
+        plt.ylabel('Taux')
         plt.show()

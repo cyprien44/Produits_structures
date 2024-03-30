@@ -1,4 +1,3 @@
-# fichier .run
 from backend.monte_carlo import MonteCarlo
 from backend.data.stock_data import StockData
 from backend.data.rate_curve import ZeroCouponCurve
@@ -6,6 +5,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 if __name__ == '__main__':
+    # Test
+    taux_us = ZeroCouponCurve()
+    taux_us.plot_rate_curve()
 
     sj_1 = StockData(spot_price=170, strike=180, ticker='AAPL', maturity_date='2025-09-19')
     '''sj_2 = StockData(spot_price=100, volatility=0.1, dividend_yield=0.015)
@@ -62,14 +64,5 @@ if __name__ == '__main__':
     plt.show()
 
     print(sj_1.dividend_yield)'''
-
-    # Calculer les taux zéro coupon
-    curve_builder = ZeroCouponCurve({
-            '13W': '^IRX',
-            '5Y': '^FVX',
-            '10Y': '^TNX',
-            '30Y': '^TYX'
-        })
-    zero_coupon_rates = curve_builder.plot_curve()
 
 
