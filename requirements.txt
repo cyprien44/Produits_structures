@@ -2,3 +2,6 @@ streamlit
 numpy
 pandas
 matplotlib
+backend.monte_carlo
+backend.data.stock_data
+backend.models
