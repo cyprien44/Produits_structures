@@ -1,13 +1,21 @@
-# formules des payoffs etc
+import numpy as np
+from scipy.stats import norm
 
-def price_autocall(self):
-    """
-    Calcule le prix d'un produit autocallable en utilisant les chemins de prix simulés.
-    Cette fonction doit être adaptée en fonction des spécificités de votre produit autocallable.
-    """
-    paths = self.simulate_price_paths()
-    # Exemple de calcul simplifié - à personnaliser :
-    payoff = np.maximum(paths[-1] - self.strike, 0)
-    discounted_payoff = np.exp(-self.risk_free_rate * self.maturity) * payoff
-    price = np.mean(discounted_payoff)
-    return price
+class Models:
+    def __init__(self, spot_price, strike, risk_free_rate, maturity, dividend_yield, volatility):
+        self.spot_price = spot_price
+        self.strike = strike
+        self.risk_free_rate = risk_free_rate
+        self.maturity = maturity
+        self.dividend_yield = dividend_yield
+        self.volatility = volatility
+
+    def black_scholes_call(self):
+        d1 = (np.log(self.spot_price / self.strike) + (self.risk_free_rate - self.dividend_yield + 0.5 * self.volatility ** 2) * self.maturity) / (self.volatility * np.sqrt(self.maturity))
+        d2 = d1 - self.volatility * np.sqrt(self.maturity)
+        return self.spot_price * np.exp(-self.dividend_yield * self.maturity) * norm.cdf(d1) - self.strike * np.exp(-self.risk_free_rate * self.maturity) * norm.cdf(d2)
+
+    def black_scholes_put(self):
+        d1 = (np.log(self.spot_price / self.strike) + (self.risk_free_rate - self.dividend_yield + 0.5 * self.volatility ** 2) * self.maturity) / (self.volatility * np.sqrt(self.maturity))
+        d2 = d1 - self.volatility * np.sqrt(self.maturity)
+        return self.strike * np.exp(-self.risk_free_rate * self.maturity) * norm.cdf(-d2) - self.spot_price * np.exp(-self.dividend_yield * self.maturity) * norm.cdf(-d1)

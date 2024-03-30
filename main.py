@@ -6,7 +6,7 @@ import numpy as np
 
 if __name__ == '__main__':
     # Test
-    taux_us = ZeroCouponCurve()
+    taux_us = ZeroCouponCurve(date='20240301')
     taux_us.plot_rate_curve()
 
     sj_1 = StockData(spot_price=170, strike=180, ticker='AAPL', maturity_date='2025-09-19')

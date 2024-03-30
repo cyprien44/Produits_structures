@@ -1,8 +1,6 @@
-#récupération spot, dividende, correlation des stocks (correl jsp)
 import yfinance as yf
 from scipy.optimize import fsolve
-from scipy.stats import norm
-import numpy as np
+from backend.models import Models
 from datetime import datetime
 import pandas as pd
 
@@ -45,7 +43,7 @@ class StockData:
             market_price = row['lastPrice']
 
             # Fonction à résoudre
-            f = lambda sigma: black_scholes_call(S, K, T, r, d, sigma) - market_price
+            f = lambda sigma: Models(S, K, T, r, d, sigma).black_scholes_call() - market_price
 
             # Utilisation de fsolve pour trouver la volatilité implicite
             implied_vol = fsolve(f, 0.2)  # 0.2 est une estimation initiale
@@ -59,7 +57,7 @@ class StockData:
             market_price = row['lastPrice']
 
             # Fonction à résoudre
-            f = lambda sigma: black_scholes_put(S, K, T, r, d, sigma) - market_price
+            f = lambda sigma: Models(S, K, T, r, d, sigma).black_scholes_put() - market_price
 
             # Utilisation de fsolve pour trouver la volatilité implicite
             implied_vol = fsolve(f, 0.2)  # 0.2 est une estimation initiale
@@ -71,14 +69,3 @@ class StockData:
         calls = calls[(calls['strike'] > self.spot_price) & (calls['strike'] < moneyness_range[1] * self.spot_price)]
         puts = puts[(puts['strike'] > moneyness_range[0] * self.spot_price) & (puts['strike'] < self.spot_price)]
         return calls, puts
-
-
-def black_scholes_call(S, K, T, r, d, sigma):
-    d1 = (np.log(S / K) + (r - d + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
-    d2 = d1 - sigma * np.sqrt(T)
-    return S * np.exp(-d * T) * norm.cdf(d1) - K * np.exp(-r * T) * norm.cdf(d2)
-
-def black_scholes_put(S, K, T, r, d, sigma):
-    d1 = (np.log(S / K) + (r - d + 0.5 * sigma ** 2) * T) / (sigma * np.sqrt(T))
-    d2 = d1 - sigma * np.sqrt(T)
-    return K * np.exp(-r * T) * norm.cdf(-d2) - S * np.exp(-d * T) * norm.cdf(-d1)

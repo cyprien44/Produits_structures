@@ -15,7 +15,7 @@ class ZeroCouponCurve:
         """
         Récupère les données de Bloomberg pour les bons du Trésor américain.
         """
-        df = pd.read_json('rate.json')
+        df = pd.read_json('backend/data/rate.json')
 
         start_date = datetime.strptime(self.date, '%Y%m%d')
 
