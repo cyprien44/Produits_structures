@@ -1,23 +1,12 @@
 import numpy as np
 import pandas as pd
+from pandas.tseries.offsets import BDay
 
 class MonteCarlo:
-    """
-    Classe Monte Carlo pour évaluer le prix de produits autocallables.
-    """
     def __init__(self, spots, maturity, risk_free_rate, dividend_yields, volatilities,
-                 correlation_matrix, num_simu=10000, day_conv=360, seed=None):
+                 correlation_matrix, num_simu=10000, day_conv=360, seed=None, observation_frequency='monthly'):
         """
-        Initialisation de la classe Monte Carlo pour un nombre quelconque de sous-jacents.
-
-        :param spots: Liste des prix initiaux des sous-jacents.
-        :param maturity: Maturité du produit (en années).
-        :param risk_free_rate: Taux sans risque annuel.
-        :param dividend_yields: Liste des rendements de dividendes annuels pour chaque sous-jacent.
-        :param volatilities: Liste des volatilités annuelles pour chaque sous-jacent.
-        :param correlation_matrix: Matrice de corrélation NxN pour les sous-jacents.
-        :param num_simu: Nombre de chemins à simuler.
-        :param day_conv: Nombre de jours de trading par an.
+        Initialisation avec prise en compte de la fréquence d'observation.
         """
         self.spots = np.array(spots)
         self.maturity = maturity
@@ -26,47 +15,81 @@ class MonteCarlo:
         self.volatilities = np.array(volatilities)
         self.correlation_matrix = np.array(correlation_matrix)
         self.num_simu = num_simu
-        self.num_time_steps = int(maturity * day_conv)
-        self.delta_t = maturity / day_conv
+        self.num_steps = None
+        self.day_conv = day_conv
+        self.delta_t = 1 / day_conv  # Ajustement pour les simulations quotidiennes
         self.seed = seed
+        self.observation_frequency = observation_frequency
+        self.simulation_dates = self.generate_simulation_dates()
+        self.observation_dates = self.generate_observation_dates()
         self.generate_correlated_shocks()
         self.simulations = self.simulate_prices()
+        
 
+    def generate_simulation_dates(self):
+        """
+        Génère les dates de chaque étape de simulation sur une base quotidienne.
+        """
+        start_date = pd.Timestamp.today()
+        end_date = start_date + pd.offsets.DateOffset(years=self.maturity)
+
+        # Générer les dates de simulation quotidiennes
+        dates = pd.date_range(start=start_date, end=end_date, freq='B').normalize()  # 'B' pour jours ouvrables
+
+        return dates
+
+    def generate_observation_dates(self):
+        """
+        Génère les dates d'observations basées sur la fréquence et ajuste selon les jours ouvrables.
+        """
+        start_date = pd.Timestamp.today()
+        end_date = start_date + pd.offsets.DateOffset(years=self.maturity)
+
+        if self.observation_frequency == 'monthly':
+            freq = 'BM'
+        elif self.observation_frequency == 'quarterly':
+            freq = 'BQ'
+        elif self.observation_frequency == 'semiannually':
+            freq = 'BQ-FEB,AUG'
+        elif self.observation_frequency == 'annually':
+            freq = 'BA'
+        else:
+            raise ValueError("Fréquence d'observation non reconnue.")
+
+        # Générer les dates d'observations
+        dates = pd.date_range(start=start_date, end=end_date, freq=freq).normalize()
+
+        return dates
     def generate_correlated_shocks(self):
         """
         Génère des chocs corrélés pour tous les sous-jacents en utilisant la décomposition de Cholesky.
         """
+        self.num_steps = len(self.simulation_dates)
         if self.seed is not None:
             np.random.seed(self.seed)
         L = np.linalg.cholesky(self.correlation_matrix)
-        z_uncorrelated = np.random.normal(0.0, 1.0, (self.num_time_steps, self.num_simu, len(self.spots))) * self.delta_t ** 0.5
+        z_uncorrelated = np.random.normal(0.0, 1.0, (self.num_steps, self.num_simu, len(self.spots))) * self.delta_t ** 0.5
         self.z = np.einsum('ij, tkj -> tki', L, z_uncorrelated)
 
     def simulate_prices(self):
         """
-        Simule les chemins de prix pour tous les sous-jacents en utilisant les chocs corrélés.
+        Simule les chemins de prix avec des dates de simulation et retourne les résultats sous forme de DataFrames.
         """
         dt = self.delta_t
-        simu = np.zeros((self.num_time_steps + 1, self.num_simu, len(self.spots)))
+        simu = np.zeros((self.num_steps, self.num_simu, len(self.spots)))
         simu[0, :, :] = self.spots
-        for t in range(1, self.num_time_steps + 1):
+        
+        for t in range(1, self.num_steps):
             simu[t] = simu[t-1] * np.exp(
-                (self.risk_free_rate - self.dividend_yields - 0.5 * self.volatilities**2)
-                * dt + self.volatilities * self.z[t-1]
-            )   
-        # Assuming simulations have been run and self.simulations is populated
+                (self.risk_free_rate - self.dividend_yields - 0.5 * self.volatilities**2) * dt + self.volatilities * self.z[t-1]
+            )
+
         dataframes = []
         for asset_index in range(simu.shape[2]):
-            # Extract simulation data for this asset
             asset_data = simu[:, :, asset_index]
-            
-            # Create DataFrame: Steps as index, Simulations as columns
-            df = pd.DataFrame(asset_data)
-            df.index = [f'Step {step+1}' for step in range(self.num_time_steps + 1)]
-            df.columns = [f'Simulation {sim+1}' for sim in range(self.num_simu)]
-            
+            df = pd.DataFrame(asset_data, index=self.simulation_dates, columns=[f'Simulation {sim+1}' for sim in range(self.num_simu)])
             dataframes.append(df)
-        
+
         return dataframes
     
     def print_simulation_dataframes(self):

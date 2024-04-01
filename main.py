@@ -22,11 +22,14 @@ if __name__ == '__main__':
                             correlation_matrix=correlation_matrix,
                             num_simu=2,
                             day_conv= 20,
+                            observation_frequency='monthly',
                             seed=13)
 
     # Simulation de Monte Carlo (peut avoir été réalisée auparavant)
     montecarlo.simulate_prices()
-    #montecarlo.print_simulation_dataframes()
+    montecarlo.print_simulation_dataframes()
+
+ 
     # Paramètres hypothétiques pour l'initialisation d'Autocall
     nominal_value = 1000  # La valeur nominale du produit structuré
     coupon_rate = 0.05  # Taux de coupon, par exemple 5%
@@ -51,26 +54,6 @@ if __name__ == '__main__':
     # Calcul du payoff moyen
     autocall.print_average_present_values()
 
-    ''''
-    """Afficher les chemins de prix simulés pour chaque sous-jacent."""
+    
 
-    # Obtenir le nombre de sous-jacents
-    num_subjacent = len(sim.T)
-
-    # Calculer le nombre de lignes et de colonnes pour le tableau de graphiques
-    num_rows = int(np.ceil(np.sqrt(num_subjacent)))
-    num_cols = int(np.ceil(num_subjacent / num_rows))
-
-    plt.figure(figsize=(14, 7))
-
-    # Parcourir chaque sous-jacent
-    for i, prices in enumerate(sim.T):
-        # Créer un sous-graphique pour chaque sous-jacent
-        plt.subplot(num_rows, num_cols, i + 1)
-        for path in prices:
-            plt.plot(path)
-        plt.title(f'Chemins de prix simulés pour le sous-jacent {i + 1}')
-
-    plt.tight_layout()
-    plt.show()'''
 
