@@ -1,12 +1,13 @@
 import numpy as np
 from datetime import datetime
+from scipy.interpolate import interp2d, interp1d
+from backend.data.correlation import *
 
 class MonteCarlo:
     """
     Classe Monte Carlo pour évaluer le prix de produits autocallables.
     """
-    def __init__(self, spots, start_date, end_date, risk_free_rate, dividend_yields, volatilities,
-                 correlation_matrix, num_simu=10000, day_conv=360, seed=None):
+    def __init__(self, stocks, start_date, end_date, num_simu=10000, day_conv=360, seed=None):
         """
         Initialisation de la classe Monte Carlo pour un nombre quelconque de sous-jacents.
 
@@ -14,20 +15,19 @@ class MonteCarlo:
         :param maturity: Maturité du produit (en années).
         :param risk_free_rate: Taux sans risque annuel.
         :param dividend_yields: Liste des rendements de dividendes annuels pour chaque sous-jacent.
-        :param volatilities: Liste des volatilités annuelles pour chaque sous-jacent.
         :param correlation_matrix: Matrice de corrélation NxN pour les sous-jacents.
         :param num_simu: Nombre de chemins à simuler.
         :param day_conv: Nombre de jours de trading par an.
         """
-        self.spots = np.array(spots)
+        self.stocks = stocks
+        self.spots = np.array([stock.spot_price for stock in stocks])
         self.start_date = datetime.strptime(start_date, "%Y-%m-%d")
         self.end_date = datetime.strptime(end_date, "%Y-%m-%d")
         self.maturity = (self.end_date - self.start_date).days / 365
-        self.risk_free_rate = risk_free_rate
-        self.dividend_yields = np.array(dividend_yields)
-        self.volatilities = np.array(volatilities)
-        self.correlation_matrix = correlation_matrix
+        self.dividend_yields = np.array([stock.dividend_yield for stock in stocks])
+        self.correlation_matrix = get_correlation()
         self.num_simu = num_simu
+        self.day_conv = day_conv
         self.num_time_steps = int(self.maturity * day_conv)
         self.delta_t = self.maturity / day_conv
         self.seed = seed
@@ -51,9 +51,21 @@ class MonteCarlo:
         dt = self.delta_t
         simu = np.zeros((self.num_time_steps + 1, self.num_simu, len(self.spots)))
         simu[0, :, :] = self.spots
+
+        # Create an interpolation function for the volatility and rate of each stock
+        volatilities = [interp2d(stock.volatility_surface.volatility_surface['dates_in_years'],
+                                 stock.volatility_surface.volatility_surface['strike'],
+                                 stock.volatility_surface.volatility_surface['implied_Volatility'],) for stock in self.stocks]
+        rates = [interp1d(stock.rate_curve.data['maturity_in_years'], stock.rate_curve.data['rates'],
+                          fill_value="extrapolate") for stock in
+                 self.stocks]
+
         for t in range(1, self.num_time_steps + 1):
-            simu[t] = simu[t-1] * np.exp(
-                (self.risk_free_rate - self.dividend_yields - 0.5 * self.volatilities**2)
-                * dt + self.volatilities * self.z[t-1]
-            )
+            t_in_years = t / self.day_conv
+            for i in range(len(self.spots)):
+                # Get the precomputed volatility and rate
+                volatility = volatilities[i](t_in_years, simu[t - 1, :, i]).flatten()
+                rate = rates[i](t_in_years)
+                simu[t, :, i] = simu[t - 1, :, i] * np.exp(
+                    (rate - self.dividend_yields[i] - 0.5 * volatility ** 2) * dt + volatility * self.z[t - 1, :, i])
         return simu

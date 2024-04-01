@@ -2,9 +2,13 @@ from backend.monte_carlo import MonteCarlo
 from backend.data.stock_data import StockData
 from backend.data.rate_curve import ZeroCouponCurve
 from backend.data.volatility import Volatility
-from backend.data.correlation import *
+
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
+import matplotlib
 import numpy as np
+import plotly.graph_objects as go
 
 if __name__ == '__main__':
     # Pour notre cas, nous prenons en date de départ le 2024-03-01 et en date de fin le 2034-03-01
@@ -14,25 +18,21 @@ if __name__ == '__main__':
     #US_rate.plot_rate_curve()
 
     # Récupération des données des sous-jacents
-    Apple = StockData(ticker='AAPL US Equity')
-    Microsoft = StockData(ticker='MSFT US Equity')
-    Google = StockData(ticker='GOOGL US Equity')
+    Apple = StockData(ticker='AAPL US Equity', pricing_date='20240301', rate=US_rate)
+    Microsoft = StockData(ticker='MSFT US Equity', pricing_date='20240301', rate=US_rate)
+    Google = StockData(ticker='GOOGL US Equity', pricing_date='20240301', rate=US_rate)
 
-    # Récupération des corrélations
-    correlation_matrix = get_correlation()
-
-    # Récupération des volatilités implicites (pas terminé !!!!)
-    #Apple_volatility = Volatility(stock=Apple, maturity_date='20340301', rate=US_rate.data, dividend_yield=Apple.dividend_yield)
+    '''Surface de volatilité implicite'''
+    # Affichage de la surface de volatilité implicite
+    Apple.volatility_surface.plot_volatility_surface()
+    Microsoft.volatility_surface.plot_volatility_surface()
+    Google.volatility_surface.plot_volatility_surface()
 
 
     # Assurez-vous que votre classe MonteCarlo est mise à jour pour accepter les nouveaux paramètres
-    simulation = MonteCarlo(spots=[Apple.spot_price, Microsoft.spot_price, Google.spot_price],
+    simulation = MonteCarlo(stocks=[Apple, Microsoft, Google],
                             start_date="2024-03-01",
                             end_date="2025-03-01",
-                            risk_free_rate=US_rate.data.iloc[0,0],
-                            dividend_yields=[Apple.dividend_yield, Microsoft.dividend_yield, Google.dividend_yield],
-                            volatilities=[0.2, 0.1, 0.15],
-                            correlation_matrix=correlation_matrix,
                             num_simu=10000,
                             day_conv=360,
                             seed=10)
@@ -63,17 +63,6 @@ if __name__ == '__main__':
     plt.tight_layout()
     plt.show()
 
-    '''volatility = sj_1.volatility
 
-    # Tracer le smile de volatilité pour les puts
-    plt.plot(volatility['strike'], volatility['implied_Volatility'], 'o', label='Volatilité implicite')
-
-    plt.xlabel('Strike Price')
-    plt.ylabel('Implied Volatility')
-    plt.title('Volatility Smile')
-    plt.legend()
-    plt.show()
-
-    print(sj_1.dividend_yield)'''
 
 

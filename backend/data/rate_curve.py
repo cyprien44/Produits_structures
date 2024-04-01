@@ -2,6 +2,7 @@ import pandas as pd
 import re
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d
 
 class ZeroCouponCurve:
     def __init__(self, date='20240301'):
@@ -44,6 +45,12 @@ class ZeroCouponCurve:
 
         # Remplacer les colonnes du DataFrame
         df.columns = new_columns
+        df = df.T
+        df.rename(columns={df.columns[0]: 'rates'}, inplace=True)
+
+        def date_to_years(date):
+            return (date - datetime.strptime(self.date, "%Y%m%d")).days / 365.0
+        df['maturity_in_years'] = df.index.map(date_to_years)
 
         return df/100
 
@@ -57,3 +64,18 @@ class ZeroCouponCurve:
         plt.xlabel('Date')
         plt.ylabel('Taux')
         plt.show()
+
+    def interpolate_rate(self, date):
+        """
+        Interpole la courbe des taux pour une date cible.
+        """
+        # Convertir la date en année
+        date_in_year = (datetime.strptime(date, "%Y%m%d") - datetime.strptime(self.date, '%Y%m%d')).days / 365.0
+
+        # Créer une fonction d'interpolation
+        interp_func = interp1d(self.data['maturity_in_years'], self.data['rates'], kind='linear', fill_value='extrapolate')
+
+        # Utiliser la fonction d'interpolation pour obtenir le taux à la date cible
+        interpolated_rate = interp_func(date_in_year).tolist()
+
+        return interpolated_rate
