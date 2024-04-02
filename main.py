@@ -23,16 +23,14 @@ if __name__ == '__main__':
                             num_simu=2,
                             day_conv= 360,
                             observation_frequency='monthly',
-                            seed=27)
+                            seed=45)
 
-    # Simulation de Monte Carlo (peut avoir été réalisée auparavant)
-    montecarlo.simulate_prices()
     
     # Paramètres hypothétiques pour l'initialisation d'Autocall
     nominal_value = 1000  # La valeur nominale du produit structuré
     coupon_rate = 0.05  # Taux de coupon, par exemple 5%
     coupon_barrier = 1.1  # Barrière de coupon, par exemple 110%
-    autocall_barrier = 1.5  # Barrière d'autocall, par exemple 120%
+    autocall_barrier = 1.15  # Barrière d'autocall, par exemple 120%
     risk_free_rate = 0.02  # Taux sans risque
 
     # Initialisation d'Autocall avec l'objet MonteCarlo
@@ -47,7 +45,7 @@ if __name__ == '__main__':
 
     # Génération des payoffs
     autocall.print_payoffs_dataframes()
-    autocall.plot_simulations()
+    autocall.show_simulations()
     # Calcul du payoff moyen
     autocall.print_average_present_values()
 

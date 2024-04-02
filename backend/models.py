@@ -14,6 +14,7 @@ class Autocall:
         self.payoffs, self.payoffs_discount = self.generate_payoffs()
         self.average_price = None
         self.overall_average = None
+        self.figs = []  
 
 
     def discount_factor(self, step, total_steps):
@@ -21,6 +22,7 @@ class Autocall:
         return np.exp(-self.risk_free * time)
     
     def plot_simulations(self):
+        self.figs = []  # Initialiser une liste pour stocker les figures si vous avez plusieurs actifs
         for actif_index, df in enumerate(self.monte_carlo.simulations):
             fig, ax = plt.subplots(figsize=(10, 6))
 
@@ -44,7 +46,7 @@ class Autocall:
             ax.xaxis.set_major_locator(mdates.AutoDateLocator())
             plt.xticks(rotation=45)
 
-            ax.set_title(f'Wiener Process Simulation for Asset {actif_index + 1}')
+            ax.set_title(f'Monte carlo simulation for Asset {actif_index + 1}')
             ax.set_xlabel('Time')
             ax.set_ylabel('Process Value')
             ax.grid(True, which='both', axis='y', linestyle='--', color='grey')
@@ -52,6 +54,15 @@ class Autocall:
             ax.legend()
 
             plt.tight_layout()
+            self.figs.append(fig)  # Ajouter la figure à la liste des figures
+
+
+    def show_simulations(self):
+        # S'assurer que les figures ont été générées
+        if not hasattr(self, 'figs') or not self.figs:
+            self.plot_simulations()
+
+        for fig in self.figs:
             plt.show()
 
     def generate_payoffs(self):
@@ -83,7 +94,7 @@ class Autocall:
                 # S'assurer que le prix n'a jamais dépassé l'autocall barrière dans le passé sinon fin de contrat
                 if step > 0:
                     # Filtrer df pour ces dates d'observation
-                    filter_df = df.loc[self.monte_carlo.observation_dates[:step-1]]
+                    filter_df = df.loc[self.monte_carlo.observation_dates[:step]]
                     # Calculer max_price_ratios en se basant sur les prix filtrés
                     max_price_ratios = filter_df.max(axis=0) / initial_prices
                     no_redemption_condition = max_price_ratios <= self.autocall_barrier
