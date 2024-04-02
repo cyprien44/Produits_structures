@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 
 class Autocall:
     def __init__(self, monte_carlo, nominal, coupon_rate, coupon_barrier, autocall_barrier, risk_free):
@@ -20,27 +21,38 @@ class Autocall:
         return np.exp(-self.risk_free * time)
     
     def plot_simulations(self):
-
         for actif_index, df in enumerate(self.monte_carlo.simulations):
-            plt.figure(figsize=(10, 6))
-            
+            fig, ax = plt.subplots(figsize=(10, 6))
+
+            # Convertir l'index en datetime si ce n'est pas déjà le cas
+            df.index = pd.to_datetime(df.index)
+
             # Tracer chaque simulation pour l'actif courant
             for sim_index in df.columns:
-                plt.plot(df.index, df[sim_index], lw=1)
-            
-            # Ajouter une ligne horizontale pour la barrière de coupon
-            plt.axhline(y= self.coupon_barrier * 100, color='g', linestyle='--', label=f'Coupon Barrier ({round(self.coupon_barrier*100,1)}%)')
-            
-            # Ajouter une ligne horizontale pour la barrière d'autocall
-            plt.axhline(y= self.autocall_barrier * 100, color='r', linestyle='--', label=f'Autocall Barrier ({round(self.autocall_barrier*100,1)}%)')
-            
-            plt.title(f'Wiener Process Simulation for Asset {actif_index + 1}')
-            plt.xlabel('Time')
-            plt.ylabel('Process Value')
-            plt.legend()  # Affiche la légende
-            plt.grid(True)
-            plt.show()
+                ax.plot(df.index, df[sim_index], lw=1)
 
+            # Ajouter une ligne horizontale pour la barrière de coupon et d'autocall
+            ax.axhline(y=self.coupon_barrier * 100, color='g', linestyle='--', label=f'Coupon Barrier ({round(self.coupon_barrier*100, 1)}%)')
+            ax.axhline(y=self.autocall_barrier * 100, color='r', linestyle='--', label=f'Autocall Barrier ({round(self.autocall_barrier*100, 1)}%)')
+
+            # Ajouter une ligne verticale pour chaque date d'observation
+            for obs_date in self.monte_carlo.observation_dates:
+                ax.axvline(x=obs_date, color='lightblue', linestyle='--', linewidth=1, alpha=0.5)
+
+            # Formater l'axe des x pour afficher les dates de manière lisible
+            ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
+            ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+            plt.xticks(rotation=45)
+
+            ax.set_title(f'Wiener Process Simulation for Asset {actif_index + 1}')
+            ax.set_xlabel('Time')
+            ax.set_ylabel('Process Value')
+            ax.grid(True, which='both', axis='y', linestyle='--', color='grey')
+            ax.grid(False, which='both', axis='x')
+            ax.legend()
+
+            plt.tight_layout()
+            plt.show()
 
     def generate_payoffs(self):
         # Initialiser des listes pour stocker les DataFrames des payoffs et des payoffs actualisés pour chaque actif
@@ -50,7 +62,7 @@ class Autocall:
         # Parcourir chaque actif dans les simulations générées par Monte Carlo
         for actif_index, df in enumerate(self.monte_carlo.simulations):
             # Obtenir le nombre d'étapes et de simulations pour l'actif actuel
-            num_steps = df.shape[0]
+            num_steps = len(self.monte_carlo.observation_dates)
             num_simulations = df.shape[1]
 
             # Initialiser des tableaux pour stocker les payoffs et les payoffs actualisés à chaque étape pour chaque simulation
@@ -58,9 +70,9 @@ class Autocall:
             discounted_payoffs_actif = np.zeros((num_steps, num_simulations))
 
             # Parcourir chaque étape de simulation pour l'actif actuel
-            for step, time_step in enumerate(df.index):
+            for step, time_step in enumerate(self.monte_carlo.observation_dates):
                 # Obtenir les prix courants et les prix initiaux pour calculer les ratios de prix
-                current_prices = df.iloc[step].values
+                current_prices = df.loc[time_step].values
                 initial_prices = df.iloc[0].values
                 price_ratios = current_prices / initial_prices
 
@@ -69,11 +81,21 @@ class Autocall:
                 autocall_condition = price_ratios >= self.autocall_barrier
 
                 # S'assurer que le prix n'a jamais dépassé l'autocall barrière dans le passé sinon fin de contrat
-                max_price_ratios = df.iloc[:step].max(axis=0) / initial_prices
-                no_redemption_condition = max_price_ratios <= self.autocall_barrier
+                if step > 0:
+                    # Filtrer df pour ces dates d'observation
+                    filter_df = df.loc[self.monte_carlo.observation_dates[:step-1]]
+                    # Calculer max_price_ratios en se basant sur les prix filtrés
+                    max_price_ratios = filter_df.max(axis=0) / initial_prices
+                    no_redemption_condition = max_price_ratios <= self.autocall_barrier
+                else:
+                    # Si nous sommes à la première observation, utiliser les ratios actuels comme max_ratios
+                    max_price_ratios = price_ratios
+                    no_redemption_condition = True
+
+                
 
                 # À la dernière étape, s'assurer de payer le nominal si les conditions d'autocall ne sont pas remplies
-                if step == (len(df.index) - 1):
+                if step == (num_steps - 1):
                     for i in range(len(no_redemption_condition)):
                         if bool(no_redemption_condition[i]):
                             no_redemption_condition[i] = autocall_condition[i] = True
@@ -89,8 +111,8 @@ class Autocall:
                 discounted_payoffs_actif[step, :] = (total_payment * discount)
 
             # Créer des DataFrames pour les payoffs et les payoffs actualisés et les ajouter aux listes
-            df_payoffs = pd.DataFrame(payoffs_actif, index=df.index, columns=[f'Simulation {sim+1}' for sim in range(num_simulations)])
-            df_discounted_payoffs = pd.DataFrame(discounted_payoffs_actif, index=df.index, columns=[f'Simulation {sim+1}' for sim in range(num_simulations)])
+            df_payoffs = pd.DataFrame(payoffs_actif, index= self.monte_carlo.observation_dates, columns=[f'Simulation {sim+1}' for sim in range(num_simulations)])
+            df_discounted_payoffs = pd.DataFrame(discounted_payoffs_actif, index= self.monte_carlo.observation_dates,  columns=[f'Simulation {sim+1}' for sim in range(num_simulations)])
             
             payoffs_dataframes.append(df_payoffs)
             discounted_payoffs_dataframes.append(df_discounted_payoffs)

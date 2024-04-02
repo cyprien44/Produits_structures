@@ -9,7 +9,7 @@ if __name__ == '__main__':
 
     sj_1 = StockData(spot_price=100, volatility=0.2, dividend_yield=0.02)
     sj_2 = StockData(spot_price=100, volatility=0.1, dividend_yield=0.015)
-    sj_3 = StockData(spot_price=100, volatility=0.4, dividend_yield=0)
+    sj_3 = StockData(spot_price=100, volatility=0.3, dividend_yield=0)
 
     correlation_matrix = np.array([[1, 0.5, 0.3], [0.5, 1, 0.4], [0.3, 0.4, 1]])
 
@@ -21,20 +21,18 @@ if __name__ == '__main__':
                             volatilities=[sj_1.volatility, sj_2.volatility, sj_3.volatility],
                             correlation_matrix=correlation_matrix,
                             num_simu=2,
-                            day_conv= 20,
+                            day_conv= 360,
                             observation_frequency='monthly',
-                            seed=13)
+                            seed=27)
 
     # Simulation de Monte Carlo (peut avoir été réalisée auparavant)
     montecarlo.simulate_prices()
-    montecarlo.print_simulation_dataframes()
-
- 
+    
     # Paramètres hypothétiques pour l'initialisation d'Autocall
     nominal_value = 1000  # La valeur nominale du produit structuré
     coupon_rate = 0.05  # Taux de coupon, par exemple 5%
     coupon_barrier = 1.1  # Barrière de coupon, par exemple 110%
-    autocall_barrier = 1.2  # Barrière d'autocall, par exemple 120%
+    autocall_barrier = 1.5  # Barrière d'autocall, par exemple 120%
     risk_free_rate = 0.02  # Taux sans risque
 
     # Initialisation d'Autocall avec l'objet MonteCarlo
@@ -48,9 +46,8 @@ if __name__ == '__main__':
     )
 
     # Génération des payoffs
-    autocall.plot_simulations()
     autocall.print_payoffs_dataframes()
-
+    autocall.plot_simulations()
     # Calcul du payoff moyen
     autocall.print_average_present_values()
 
