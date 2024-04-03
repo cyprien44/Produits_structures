@@ -6,29 +6,37 @@ import pandas as pd
 from pandas.tseries.offsets import BDay
 
 class MonteCarlo:
-    def __init__(self, spots, maturity, risk_free_rate, dividend_yields, volatilities,
-                 correlation_matrix, num_simu=10000, day_conv=360, seed=None, observation_frequency='monthly'):
+    def __init__(self, stocks, start_date, end_date, num_simu=10000, day_conv=360, seed=None, risk_free_rate = 0.02, observation_frequency='monthly'):
         """
         Initialisation avec prise en compte de la fréquence d'observation.
         """
-        self.spots = np.array(spots)
-        self.maturity = maturity
-        self.risk_free_rate = risk_free_rate
-        self.dividend_yields = np.array(dividend_yields)
-        self.volatilities = np.array(volatilities)
-        self.correlation_matrix = np.array(correlation_matrix)
+        self.stocks = stocks
+        self.spots = np.array([stock.spot_price for stock in stocks])
+        self.start_date = datetime.strptime(start_date, "%Y-%m-%d")
+        self.end_date = datetime.strptime(end_date, "%Y-%m-%d")
+        self.maturity = (self.end_date - self.start_date).days / 365
+        self.dividend_yields = np.array([stock.dividend_yield for stock in stocks])
+        self.correlation_matrix = get_correlation()
         self.num_simu = num_simu
         self.day_conv = day_conv
         self.num_time_steps = int(self.maturity * day_conv)
         self.delta_t = self.maturity / day_conv
-        self.num_steps = None
         self.seed = seed
-        self.observation_frequency = observation_frequency
+
+        #part Cyprien
         self.simulation_dates = self.generate_simulation_dates()
-        self.observation_dates = self.generate_observation_dates()
+
         self.generate_correlated_shocks()
+        self.simulations = self.simulate_correlated_prices()
+
+        # Partie Cyprien
+        self.risk_free_rate = risk_free_rate
+        self.volatilities = np.array([stock.dividend_yield for stock in stocks])  #np.array(volatilities)
+        self.num_steps = None
+        self.observation_frequency = observation_frequency
+        
+        self.observation_dates = self.generate_observation_dates()
         self.simulations = self.simulate_prices()
-        self.simulations_correlated = self.simulate_correlated_prices()
         
 
     def generate_simulation_dates(self):

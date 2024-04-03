@@ -8,7 +8,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 import matplotlib
 import numpy as np
-import plotly.graph_objects as go
+
 
 if __name__ == '__main__':
     # Pour notre cas, nous prenons en date de départ le 2024-03-01 et en date de fin le 2034-03-01
@@ -33,6 +33,7 @@ if __name__ == '__main__':
     montecarlo = MonteCarlo(stocks=[Apple, Microsoft, Google],
                             start_date="2024-03-01",
                             end_date="2025-03-01",
+                            risk_free_rate=0.02,
                             num_simu=10000,
                             day_conv=360,
                             seed=10,
