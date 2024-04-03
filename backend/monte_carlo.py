@@ -1,4 +1,7 @@
 import numpy as np
+from datetime import datetime
+from scipy.interpolate import interp2d, interp1d
+from backend.data.correlation import *
 import pandas as pd
 from pandas.tseries.offsets import BDay
 
@@ -15,15 +18,17 @@ class MonteCarlo:
         self.volatilities = np.array(volatilities)
         self.correlation_matrix = np.array(correlation_matrix)
         self.num_simu = num_simu
-        self.num_steps = None
         self.day_conv = day_conv
-        self.delta_t = 1 / day_conv  # Ajustement pour les simulations quotidiennes
+        self.num_time_steps = int(self.maturity * day_conv)
+        self.delta_t = self.maturity / day_conv
+        self.num_steps = None
         self.seed = seed
         self.observation_frequency = observation_frequency
         self.simulation_dates = self.generate_simulation_dates()
         self.observation_dates = self.generate_observation_dates()
         self.generate_correlated_shocks()
         self.simulations = self.simulate_prices()
+        self.simulations_correlated = self.simulate_correlated_prices()
         
 
     def generate_simulation_dates(self):
@@ -103,3 +108,28 @@ class MonteCarlo:
             print(df)
             print("\n" + "-"*50 + "\n")
 
+    def simulate_correlated_prices(self):
+        """
+        Simule les chemins de prix pour tous les sous-jacents en utilisant les chocs corrélés.
+        """
+        dt = self.delta_t
+        simu = np.zeros((self.num_time_steps + 1, self.num_simu, len(self.spots)))
+        simu[0, :, :] = self.spots
+
+        # Create an interpolation function for the volatility and rate of each stock
+        volatilities = [interp2d(stock.volatility_surface.volatility_surface['dates_in_years'],
+                                 stock.volatility_surface.volatility_surface['strike'],
+                                 stock.volatility_surface.volatility_surface['implied_Volatility'],) for stock in self.stocks]
+        rates = [interp1d(stock.rate_curve.data['maturity_in_years'], stock.rate_curve.data['rates'],
+                          fill_value="extrapolate") for stock in
+                 self.stocks]
+
+        for t in range(1, self.num_time_steps + 1):
+            t_in_years = t / self.day_conv
+            for i in range(len(self.spots)):
+                # Get the precomputed volatility and rate
+                volatility = volatilities[i](t_in_years, simu[t - 1, :, i]).flatten()
+                rate = rates[i](t_in_years)
+                simu[t, :, i] = simu[t - 1, :, i] * np.exp(
+                    (rate - self.dividend_yields[i] - 0.5 * volatility ** 2) * dt + volatility * self.z[t - 1, :, i])
+        return simu
