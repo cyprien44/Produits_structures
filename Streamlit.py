@@ -109,7 +109,8 @@ else:
                                      risk_free=risk_free_rate)
         
         def plot_simulations_streamlit(autocall):
-            for actif_index, df in enumerate(autocall.monte_carlo.simulations):
+
+            for actif_index, (df, stock) in enumerate(zip(monte_carlo.simulations, monte_carlo.stocks)):
                 fig, ax = plt.subplots(figsize=(10, 6))
 
                 # Convertir l'index en datetime si ce n'est pas déjà le cas
@@ -132,7 +133,7 @@ else:
                 ax.xaxis.set_major_locator(mdates.AutoDateLocator())
                 plt.xticks(rotation=45)
 
-                ax.set_title(f'Monte carlo simulation for Asset {actif_index + 1}')
+                ax.set_title(f'Monte Carlo Simulation for {stock.ticker}')
                 ax.set_xlabel('Time')
                 ax.set_ylabel('Process Value')
                 ax.grid(True, which='both', axis='y', linestyle='--', color='grey')
@@ -145,27 +146,18 @@ else:
 
         autocall.calculate_average_present_value()
 
-        st.markdown("---")  # Un séparateur visuel
-            # Afficher les DataFrames des payoffs et des payoffs actualisés
-        for i, df in enumerate(autocall.payoffs):
-            st.write(f"Payoffs DataFrame for Asset {i+1}:")
+        st.markdown("---")
+        for stock, df in zip(monte_carlo.stocks, autocall.payoffs):
+            st.write(f"Payoffs DataFrame for {stock.ticker}:")  # Utiliser .ticker ou .name
             st.dataframe(df)
 
-        st.markdown("---")  # Un séparateur visuel
-
-        # Titre pour la section des prix moyens individuels
+        st.markdown("---")
         st.markdown("#### Prix moyen final pour chaque actif:")
-
-        # Créer une grille avec un certain nombre de colonnes équivalent au nombre d'actifs
         cols = st.columns(len(autocall.average_price))
+        for stock, (col, value) in zip(monte_carlo.stocks, zip(cols, autocall.average_price)):
+            col.metric(label=stock.ticker, value=f"{value:.2f} €")  # Utiliser .ticker ou .name
 
-        # Remplir chaque colonne avec le nom de l'actif et son prix moyen final
-        for i, (col, value) in enumerate(zip(cols, autocall.average_price)):
-            col.metric(label=f"Actif {i+1}", value=f"{value:.2f} €")
-
-        st.markdown("---")  # Un séparateur visuel
-
-        # Pour le prix moyen final sur tous les actifs, on utilise HTML pour une taille de police plus grande
+        st.markdown("---")
         st.markdown(f"""
             <div style='text-align: center;'>
                 <span style='font-size: 1.5em;'>Prix moyen final sur tous les actifs:</span>
