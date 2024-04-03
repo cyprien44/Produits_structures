@@ -102,13 +102,10 @@ class MonteCarlo:
         return dataframes
     
     def print_simulation_dataframes(self):
-        """Print all simulation DataFrames sequentially."""
-        # Generate DataFrames from simulations
-        dataframes = self.simulations
-
-        # Iterate over each DataFrame and print it
-        for i, df in enumerate(dataframes):
-            print(f"Simulation DataFrame for Asset {i+1}:")
+        """Print all simulation DataFrames with stock names."""
+        for stock, df in zip(self.stocks, self.simulations):
+            # Assuming stock has an attribute 'name' for the stock's name, or use 'ticker' as per your setup
+            print(f"Simulation DataFrame for {stock.ticker}:")
             print(df)
             print("\n" + "-"*50 + "\n")
 

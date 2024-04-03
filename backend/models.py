@@ -41,7 +41,8 @@ class Autocall:
     
     def plot_simulations(self):
         self.figs = []  # Initialiser une liste pour stocker les figures si vous avez plusieurs actifs
-        for actif_index, df in enumerate(self.monte_carlo.simulations):
+        
+        for actif_index, (df, stock) in enumerate(zip(self.monte_carlo.simulations, self.monte_carlo.stocks)):
             fig, ax = plt.subplots(figsize=(10, 6))
 
             # Convertir l'index en datetime si ce n'est pas déjà le cas
@@ -64,7 +65,7 @@ class Autocall:
             ax.xaxis.set_major_locator(mdates.AutoDateLocator())
             plt.xticks(rotation=45)
 
-            ax.set_title(f'Monte carlo simulation for Asset {actif_index + 1}')
+            ax.set_title(f'Monte Carlo Simulation for {stock.ticker}')
             ax.set_xlabel('Time')
             ax.set_ylabel('Process Value')
             ax.grid(True, which='both', axis='y', linestyle='--', color='grey')
@@ -151,10 +152,10 @@ class Autocall:
 
     def print_payoffs_dataframes(self):
         """
-        Affiche les DataFrames des payoffs pour chaque actif.
+        Affiche les DataFrames des payoffs pour chaque actif, utilisant le nom de l'actif.
         """
-        for i, df in enumerate(self.payoffs):
-            print(f"Payoffs DataFrame for Asset {i+1}:")
+        for i, (df, stock) in enumerate(zip(self.payoffs, self.monte_carlo.stocks)):
+            print(f"Payoffs DataFrame for {stock.ticker}:")  # Utilisation de `name` comme identifiant
             print(df)
 
     def calculate_average_present_value(self):
@@ -177,11 +178,10 @@ class Autocall:
         if self.average_price is None or self.overall_average is None:
             self.calculate_average_present_value()
 
-        # Imprimer les résultats de manière plus claire
-        for i, value in enumerate(self.average_price):
-            print(f"Prix moyen final pour l'actif {i+1}: {value:.2f}")
-        
-        print(f"Prix moyen final sur tous les actifs: {self.overall_average:.2f}")
+        for stock, value in zip(self.monte_carlo.stocks, self.average_price):
+            print(f"Prix moyen final pour {stock.ticker}: {value:.2f} €")  # Utilisation de `stock.name`
+
+        print(f"Prix moyen final sur tous les actifs: {self.overall_average:.2f} €")
 
 
 
