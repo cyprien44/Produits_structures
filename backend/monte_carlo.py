@@ -22,21 +22,23 @@ class MonteCarlo:
         self.num_time_steps = int(self.maturity * day_conv)
         self.delta_t = self.maturity / day_conv
         self.seed = seed
+        #self.simulations2 = self.simulate_correlated_prices()
 
         #part Cyprien
         self.simulation_dates = self.generate_simulation_dates()
-
-        self.generate_correlated_shocks()
-        self.simulations = self.simulate_correlated_prices()
-
-        # Partie Cyprien
         self.risk_free_rate = risk_free_rate
         self.volatilities = np.array([stock.dividend_yield for stock in stocks])  #np.array(volatilities)
         self.num_steps = None
         self.observation_frequency = observation_frequency
-        
+        self.generate_correlated_shocks()
         self.observation_dates = self.generate_observation_dates()
         self.simulations = self.simulate_prices()
+
+        
+        
+
+        
+
         
 
     def generate_simulation_dates(self):

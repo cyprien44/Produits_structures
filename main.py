@@ -34,14 +34,14 @@ if __name__ == '__main__':
                             start_date="2024-03-01",
                             end_date="2025-03-01",
                             risk_free_rate=0.02,
-                            num_simu=10000,
+                            num_simu=2,
                             day_conv=360,
                             seed=10,
                             observation_frequency='monthly')
 
+    '''
     # Simuler les chemins de prix corrélés
-    sim = montecarlo.simulations_correlated
-
+    sim = montecarlo.simulations2
 
     """Afficher les chemins de prix simulés pour chaque sous-jacent."""
 
@@ -64,7 +64,7 @@ if __name__ == '__main__':
 
     plt.tight_layout()
     plt.show()
-
+    '''
 
     # Paramètres hypothétiques pour l'initialisation d'Autocall
     nominal_value = 1000  # La valeur nominale du produit structuré
