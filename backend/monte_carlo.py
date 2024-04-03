@@ -35,13 +35,6 @@ class MonteCarlo:
         self.simulations = self.simulate_prices()
 
 
-        
-        
-
-        
-
-        
-
     def generate_simulation_dates(self):
         """
         Génère les dates de chaque étape de simulation sur une base quotidienne.
