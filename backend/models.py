@@ -52,8 +52,8 @@ class Autocall:
                 ax.plot(df.index, df[sim_index], lw=1)
 
             # Ajouter une ligne horizontale pour la barrière de coupon et d'autocall
-            ax.axhline(y=self.coupon_barrier * 100, color='g', linestyle='--', label=f'Coupon Barrier ({round(self.coupon_barrier*100, 1)}%)')
-            ax.axhline(y=self.autocall_barrier * 100, color='r', linestyle='--', label=f'Autocall Barrier ({round(self.autocall_barrier*100, 1)}%)')
+            ax.axhline(y=self.coupon_barrier * df.iloc[0,0], color='g', linestyle='--', label=f'Coupon Barrier ({round(self.coupon_barrier*df.iloc[0,0], 1)})')
+            ax.axhline(y=self.autocall_barrier * df.iloc[0,0], color='r', linestyle='--', label=f'Autocall Barrier ({round(self.autocall_barrier*df.iloc[0,0], 1)})')
 
             # Ajouter une ligne verticale pour chaque date d'observation
             for obs_date in self.monte_carlo.observation_dates:

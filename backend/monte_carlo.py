@@ -6,7 +6,7 @@ import pandas as pd
 from pandas.tseries.offsets import BDay
 
 class MonteCarlo:
-    def __init__(self, stocks, start_date, end_date, num_simu=10000, day_conv=360, seed=None, risk_free_rate = 0.02, observation_frequency='monthly'):
+    def __init__(self, stocks, start_date, end_date, volatilities, num_simu=10000, day_conv=360, seed=None, risk_free_rate = 0.02, observation_frequency='monthly',):
         """
         Initialisation avec prise en compte de la fréquence d'observation.
         """
@@ -27,12 +27,13 @@ class MonteCarlo:
         #part Cyprien
         self.simulation_dates = self.generate_simulation_dates()
         self.risk_free_rate = risk_free_rate
-        self.volatilities = np.array([stock.dividend_yield for stock in stocks])  #np.array(volatilities)
+        self.volatilities = np.array(volatilities)
         self.num_steps = None
         self.observation_frequency = observation_frequency
         self.generate_correlated_shocks()
         self.observation_dates = self.generate_observation_dates()
         self.simulations = self.simulate_prices()
+
 
         
         
@@ -142,4 +143,13 @@ class MonteCarlo:
                 rate = rates[i](t_in_years)
                 simu[t, :, i] = simu[t - 1, :, i] * np.exp(
                     (rate - self.dividend_yields[i] - 0.5 * volatility ** 2) * dt + volatility * self.z[t - 1, :, i])
-        return simu
+        
+        #return simu
+        
+        dataframes = []
+        for asset_index in range(simu.shape[2]):
+            asset_data = simu[:, :, asset_index]
+            df = pd.DataFrame(asset_data, index=self.simulation_dates, columns=[f'Simulation {sim+1}' for sim in range(self.num_simu)])
+            dataframes.append(df)
+
+        return dataframes

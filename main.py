@@ -22,12 +22,13 @@ if __name__ == '__main__':
     Microsoft = StockData(ticker='MSFT US Equity', pricing_date='20240301', rate=US_rate)
     Google = StockData(ticker='GOOGL US Equity', pricing_date='20240301', rate=US_rate)
 
-    '''Surface de volatilité implicite'''
+    '''Surface de volatilité implicite
     # Affichage de la surface de volatilité implicite
     Apple.volatility_surface.plot_volatility_surface()
     Microsoft.volatility_surface.plot_volatility_surface()
     Google.volatility_surface.plot_volatility_surface()
-
+    '''
+    volatilities=[0.1, 0.2, 0.3]
 
     # Assurez-vous que votre classe MonteCarlo est mise à jour pour accepter les nouveaux paramètres
     montecarlo = MonteCarlo(stocks=[Apple, Microsoft, Google],
@@ -37,6 +38,7 @@ if __name__ == '__main__':
                             num_simu=2,
                             day_conv=360,
                             seed=10,
+                            volatilities = volatilities,
                             observation_frequency='monthly')
 
     '''
@@ -82,6 +84,8 @@ if __name__ == '__main__':
         autocall_barrier=autocall_barrier,
         risk_free=risk_free_rate
     )
+
+    montecarlo.print_simulation_dataframes()
 
     # Génération des payoffs
     autocall.print_payoffs_dataframes()
