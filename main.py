@@ -28,10 +28,13 @@ if __name__ == '__main__':
     Microsoft.volatility_surface.plot_volatility_surface()
     Google.volatility_surface.plot_volatility_surface()
     '''
-    volatilities=[0.1, 0.2, 0.3]
+    volatilities = {
+    "AAPL US Equity": 0.2,
+    "MSFT US Equity": 0.3
+}
 
     # Assurez-vous que votre classe MonteCarlo est mise à jour pour accepter les nouveaux paramètres
-    montecarlo = MonteCarlo(stocks=[Apple, Microsoft, Google],
+    montecarlo = MonteCarlo(stocks=[Apple, Microsoft],
                             start_date="2024-03-01",
                             end_date="2025-03-01",
                             risk_free_rate=0.02,
@@ -40,7 +43,7 @@ if __name__ == '__main__':
                             seed=10,
                             volatilities = volatilities,
                             observation_frequency='monthly')
-
+    
     '''
     # Simuler les chemins de prix corrélés
     sim = montecarlo.simulations2

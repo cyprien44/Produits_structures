@@ -19,10 +19,23 @@ if start_date >= end_date:
     st.error("La date de fin doit être postérieure à la date de début.")
 else:
 
-     # Liste prédéfinie des sous-jacents disponibles pour la sélection
-    available_stocks_keys = ['Apple', 'Microsoft', 'Google']
-    selected_stocks_keys = st.multiselect("Choisissez les sous-jacents", available_stocks_keys, default=available_stocks_keys)
+    name_to_ticker = {
+    "Apple": "AAPL US Equity",
+    "Microsoft": "MSFT US Equity",
+    "Google": "GOOGL US Equity",
+}
 
+    # Liste prédéfinie des sous-jacents disponibles pour la sélection
+    #available_stocks_keys = ['Apple', 'Microsoft', 'Google']
+    selected_stocks_keys = st.multiselect("Choisissez les sous-jacents", list(name_to_ticker.keys()), default=list(name_to_ticker.keys()))
+
+    # Collecte des volatilités de l'utilisateur pour chaque entreprise sélectionnée
+    user_volatilities = {}
+    for stock_key in selected_stocks_keys:
+        ticker = name_to_ticker[stock_key]  # Convertit le nom de l'entreprise en ticker
+        default_volatility = 0.2  # Met une volatilité par défaut si tu en as une
+        user_volatility = st.number_input(f"Volatility for {stock_key} ({ticker})", value=default_volatility, min_value=0.01, max_value=1.0, step=0.01)
+        user_volatilities[ticker] = user_volatility
 
     # Paramètres de simulation - Première ligne
     st.header("Paramètres de simulation")
@@ -88,16 +101,22 @@ else:
             'Microsoft': ('MSFT US Equity', US_rate),
             'Google': ('GOOGL US Equity', US_rate),
         }
-        selected_stocks = {key: StockData(ticker=data[0], pricing_date=start_date.strftime('%Y%m%d'), rate=data[1]) for key, data in stock_data.items() if key in selected_stocks_keys}
+        selected_stocks = [StockData(ticker=data[0], pricing_date=start_date.strftime('%Y%m%d'), rate=data[1]) for key, data in stock_data.items() if key in selected_stocks_keys]
+        # Après avoir collecté les volatilités de l'utilisateur
+        selected_volatilities_dict = {name_to_ticker[name]: user_volatilities[name_to_ticker[name]] for name in selected_stocks_keys}
 
-        monte_carlo = MonteCarlo(stocks=list(selected_stocks.values()),
+        st.write(selected_stocks)
+        st.write(selected_volatilities_dict)
+       
+
+        monte_carlo = MonteCarlo(stocks=selected_stocks,
                     start_date=start_date.strftime("%Y-%m-%d"),
                     end_date=end_date.strftime("%Y-%m-%d"),
                     risk_free_rate=risk_free_rate,
                     num_simu=num_simu,
                     day_conv=day_conv,
                     seed=seed,
-                    volatilities=[0.1, 0.2, 0.3],
+                    volatilities=selected_volatilities_dict,
                     observation_frequency=observation_frequency)
 
 

@@ -11,12 +11,14 @@ class MonteCarlo:
         Initialisation avec prise en compte de la fréquence d'observation.
         """
         self.stocks = stocks
+        self.selected_tickers = np.array([stock.ticker for stock in stocks])
         self.spots = np.array([stock.spot_price for stock in stocks])
         self.start_date = datetime.strptime(start_date, "%Y-%m-%d")
         self.end_date = datetime.strptime(end_date, "%Y-%m-%d")
         self.maturity = (self.end_date - self.start_date).days / 365
         self.dividend_yields = np.array([stock.dividend_yield for stock in stocks])
-        self.correlation_matrix = get_correlation()
+        
+        self.correlation_matrix = get_correlation(self.selected_tickers).values
         self.num_simu = num_simu
         self.day_conv = day_conv
         self.num_time_steps = int(self.maturity * day_conv)
@@ -27,7 +29,7 @@ class MonteCarlo:
         #part Cyprien
         self.simulation_dates = self.generate_simulation_dates()
         self.risk_free_rate = risk_free_rate
-        self.volatilities = np.array(volatilities)
+        self.volatilities = np.array([volatilities[stock.ticker] for stock in stocks])
         self.num_steps = None
         self.observation_frequency = observation_frequency
         self.generate_correlated_shocks()
@@ -73,12 +75,13 @@ class MonteCarlo:
         """
         Génère des chocs corrélés pour tous les sous-jacents en utilisant la décomposition de Cholesky.
         """
+
         self.num_steps = len(self.simulation_dates)
         if self.seed is not None:
             np.random.seed(self.seed)
         L = np.linalg.cholesky(self.correlation_matrix)
         z_uncorrelated = np.random.normal(0.0, 1.0, (self.num_steps, self.num_simu, len(self.spots))) * self.delta_t ** 0.5
-        self.z = np.einsum('ij, tkj -> tki', L, z_uncorrelated)
+        self.z = np.einsum('ij, tkj -> tki', L, z_uncorrelated, optimize= True)
 
     def simulate_prices(self):
         """
