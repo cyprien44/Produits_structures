@@ -17,8 +17,8 @@ class MonteCarlo:
         self.end_date = datetime.strptime(end_date, "%Y-%m-%d")
         self.maturity = (self.end_date - self.start_date).days / 365
         self.dividend_yields = np.array([stock.dividend_yield for stock in stocks])
-        
-        self.correlation_matrix = get_correlation(self.selected_tickers).values
+        # Permet de récuperer la matrice de corrélation dans data en fonction des titres choisis
+        self.correlation_matrix = get_correlation(self.selected_tickers).values 
         self.num_simu = num_simu
         self.day_conv = day_conv
         self.num_time_steps = int(self.maturity * day_conv)
@@ -27,7 +27,7 @@ class MonteCarlo:
         #self.simulations2 = self.simulate_correlated_prices()
 
         #part Cyprien
-        self.simulation_dates = self.generate_simulation_dates()
+        self.simulation_dates = pd.date_range(start=self.start_date, end=self.end_date, freq='B').normalize()
         self.risk_free_rate = risk_free_rate
         self.volatilities = np.array([volatilities[stock.ticker] for stock in stocks])
         self.num_steps = None
@@ -36,26 +36,11 @@ class MonteCarlo:
         self.observation_dates = self.generate_observation_dates()
         self.simulations = self.simulate_prices()
 
-
-    def generate_simulation_dates(self):
-        """
-        Génère les dates de chaque étape de simulation sur une base quotidienne.
-        """
-        start_date = pd.Timestamp.today()
-        end_date = start_date + pd.offsets.DateOffset(years=self.maturity)
-
-        # Générer les dates de simulation quotidiennes
-        dates = pd.date_range(start=start_date, end=end_date, freq='B').normalize()  # 'B' pour jours ouvrables
-
-        return dates
-
     def generate_observation_dates(self):
         """
         Génère les dates d'observations basées sur la fréquence et ajuste selon les jours ouvrables.
         """
-        start_date = pd.Timestamp.today()
-        end_date = start_date + pd.offsets.DateOffset(years=self.maturity)
-
+        
         if self.observation_frequency == 'monthly':
             freq = 'BM'
         elif self.observation_frequency == 'quarterly':
@@ -68,9 +53,10 @@ class MonteCarlo:
             raise ValueError("Fréquence d'observation non reconnue.")
 
         # Générer les dates d'observations
-        dates = pd.date_range(start=start_date, end=end_date, freq=freq).normalize()
+        dates = pd.date_range(start=self.start_date, end=self.end_date, freq=freq).normalize()
 
         return dates
+    
     def generate_correlated_shocks(self):
         """
         Génère des chocs corrélés pour tous les sous-jacents en utilisant la décomposition de Cholesky.
@@ -138,7 +124,6 @@ class MonteCarlo:
                     (rate - self.dividend_yields[i] - 0.5 * volatility ** 2) * dt + volatility * self.z[t - 1, :, i])
         
         #return simu
-        
         dataframes = []
         for asset_index in range(simu.shape[2]):
             asset_data = simu[:, :, asset_index]

@@ -124,15 +124,12 @@ class Autocall:
                     max_price_ratios = price_ratios
                     no_redemption_condition = True
 
-                
-
                 # À la dernière étape, s'assurer de payer le nominal si la barrière put n'a pas été franchit et si les conditions d'autocall ne sont pas remplies
                 if step == (num_steps - 1):
                     for i in range(len(no_redemption_condition)):
                         if bool(no_redemption_condition[i]):
                             no_redemption_condition[i] = autocall_condition[i] = True
                     
-
                 # Calculer les paiements de coupon et de rachat, puis le paiement total pour chaque simulation
                 coupon_payment = self.nominal * self.coupon_rate * coupon_condition * no_redemption_condition
                 redemption_payment = self.nominal * autocall_condition * no_redemption_condition

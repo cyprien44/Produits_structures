@@ -28,12 +28,13 @@ if __name__ == '__main__':
     Microsoft.volatility_surface.plot_volatility_surface()
     Google.volatility_surface.plot_volatility_surface()
     '''
+
+    #Hypothèse de volatilité constante pour l'instant
     volatilities = {
     "AAPL US Equity": 0.2,
     "MSFT US Equity": 0.3
 }
 
-    # Assurez-vous que votre classe MonteCarlo est mise à jour pour accepter les nouveaux paramètres
     montecarlo = MonteCarlo(stocks=[Apple, Microsoft],
                             start_date="2024-03-01",
                             end_date="2025-03-01",
@@ -71,9 +72,9 @@ if __name__ == '__main__':
     plt.show()
     '''
 
-    # Paramètres hypothétiques pour l'initialisation d'Autocall
+    # Paramètres pour l'initialisation d'Autocall
     nominal_value = 1000  
-    coupon_rate = 0.05  
+    coupon_rate = 0.05 
     coupon_barrier = 1.1 
     put_barrier = 0.8 
     autocall_barrier = 1.2
@@ -90,11 +91,15 @@ if __name__ == '__main__':
         risk_free=risk_free_rate
     )
 
+    #Print les prix des différentes simulations pour chaque actifs
     montecarlo.print_simulation_dataframes()
 
-    # Génération des payoffs
+    # Génération et print des payoffs
     autocall.print_payoffs_dataframes()
+
+    # plot un graphique par actif 
     autocall.show_simulations()
+    
     # Calcul du payoff moyen
     autocall.print_average_present_values()
 

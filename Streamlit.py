@@ -2,11 +2,12 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 from backend.monte_carlo import MonteCarlo
 from backend.models import Autocall
 from backend.data.stock_data import StockData
 from backend.data.rate_curve import ZeroCouponCurve
-import matplotlib.dates as mdates
+
 
 st.title("Simulation de produits autocallables")
 
