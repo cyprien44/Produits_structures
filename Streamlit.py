@@ -41,6 +41,8 @@ else:
     st.header("Paramètres de simulation")
     cols = st.columns([1, 1, 1, 1])
 
+    with cols[0]:
+        nominal = st.number_input("Valeur nominale", value=1000, key='nominal')
     with cols[1]:
         risk_free_rate = st.number_input("Taux sans risque annuel", value=0.02, key='risk_free_rate')
     with cols[2]:
@@ -51,10 +53,11 @@ else:
 
     # Paramètres de simulation - Deuxième ligne
     cols2 = st.columns([1, 1, 1, 1])
+
     with cols2[0]:
-        nominal = st.number_input("Valeur nominale", value=1000, key='nominal')
-    with cols2[1]:
         coupon_rate = st.number_input("Taux de coupon", value=0.05, key='coupon_rate')
+    with cols2[1]:
+        put_barrier = st.number_input("Barrière put", value=0.8, key='put_barrier')
     with cols2[2]:
         coupon_barrier = st.number_input("Barrière de coupon", value=1.1, key='coupon_barrier')
     with cols2[3]:
@@ -104,9 +107,6 @@ else:
         selected_stocks = [StockData(ticker=data[0], pricing_date=start_date.strftime('%Y%m%d'), rate=data[1]) for key, data in stock_data.items() if key in selected_stocks_keys]
         # Après avoir collecté les volatilités de l'utilisateur
         selected_volatilities_dict = {name_to_ticker[name]: user_volatilities[name_to_ticker[name]] for name in selected_stocks_keys}
-
-        st.write(selected_stocks)
-        st.write(selected_volatilities_dict)
        
 
         monte_carlo = MonteCarlo(stocks=selected_stocks,
@@ -121,11 +121,12 @@ else:
 
 
         autocall = Autocall(monte_carlo,
-                             nominal=nominal,
-                               coupon_rate=coupon_rate,
-                                 coupon_barrier=coupon_barrier,
-                                   autocall_barrier=autocall_barrier,
-                                     risk_free=risk_free_rate)
+                            nominal=nominal,
+                            coupon_rate=coupon_rate,
+                            coupon_barrier=coupon_barrier,
+                            autocall_barrier=autocall_barrier,
+                            put_barrier= put_barrier, 
+                            risk_free=risk_free_rate)
         
         def plot_simulations_streamlit(autocall):
 
@@ -142,6 +143,7 @@ else:
                 # Ajouter une ligne horizontale pour la barrière de coupon et d'autocall
                 ax.axhline(y=autocall.coupon_barrier * df.iloc[0,0], color='g', linestyle='--', label=f'Coupon Barrier ({round(autocall.coupon_barrier*df.iloc[0,0], 1)})')
                 ax.axhline(y=autocall.autocall_barrier * df.iloc[0,0], color='r', linestyle='--', label=f'Autocall Barrier ({round(autocall.autocall_barrier*df.iloc[0,0], 1)})')
+                ax.axhline(y=autocall.put_barrier * df.iloc[0,0], color='orange', linestyle='--', label=f'Put Barrier ({round(autocall.put_barrier*df.iloc[0,0], 1)})')
 
                 # Ajouter une ligne verticale pour chaque date d'observation
                 for obs_date in autocall.monte_carlo.observation_dates:

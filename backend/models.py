@@ -22,12 +22,13 @@ class Models:
             return self.strike * np.exp(-self.risk_free_rate * self.maturity) * norm.cdf(-d2) - self.spot_price * np.exp(-self.dividend_yield * self.maturity) * norm.cdf(-d1)
 
 class Autocall:
-    def __init__(self, monte_carlo, nominal, coupon_rate, coupon_barrier, autocall_barrier, risk_free):
+    def __init__(self, monte_carlo, nominal, coupon_rate, coupon_barrier, autocall_barrier,put_barrier, risk_free):
         self.monte_carlo = monte_carlo
         self.nominal = nominal
         self.coupon_rate = coupon_rate
         self.coupon_barrier = coupon_barrier
         self.autocall_barrier = autocall_barrier
+        self.put_barrier = put_barrier
         self.risk_free = risk_free
         self.payoffs, self.payoffs_discount = self.generate_payoffs()
         self.average_price = None
@@ -55,6 +56,7 @@ class Autocall:
             # Ajouter une ligne horizontale pour la barrière de coupon et d'autocall
             ax.axhline(y=self.coupon_barrier * df.iloc[0,0], color='g', linestyle='--', label=f'Coupon Barrier ({round(self.coupon_barrier*df.iloc[0,0], 1)})')
             ax.axhline(y=self.autocall_barrier * df.iloc[0,0], color='r', linestyle='--', label=f'Autocall Barrier ({round(self.autocall_barrier*df.iloc[0,0], 1)})')
+            ax.axhline(y=self.put_barrier * df.iloc[0,0], color='orange', linestyle='--', label=f'Put Barrier ({round(self.put_barrier*df.iloc[0,0], 1)})')
 
             # Ajouter une ligne verticale pour chaque date d'observation
             for obs_date in self.monte_carlo.observation_dates:
@@ -124,22 +126,46 @@ class Autocall:
 
                 
 
-                # À la dernière étape, s'assurer de payer le nominal si les conditions d'autocall ne sont pas remplies
+                # À la dernière étape, s'assurer de payer le nominal si la barrière put n'a pas été franchit et si les conditions d'autocall ne sont pas remplies
                 if step == (num_steps - 1):
                     for i in range(len(no_redemption_condition)):
                         if bool(no_redemption_condition[i]):
                             no_redemption_condition[i] = autocall_condition[i] = True
+                    
 
                 # Calculer les paiements de coupon et de rachat, puis le paiement total pour chaque simulation
                 coupon_payment = self.nominal * self.coupon_rate * coupon_condition * no_redemption_condition
                 redemption_payment = self.nominal * autocall_condition * no_redemption_condition
                 total_payment = coupon_payment + redemption_payment
-
+           
                 # Stocker le paiement total et le paiement total actualisé à l'étape courante
                 payoffs_actif[step, :] = total_payment
                 discount = self.discount_factor(step, num_steps)
                 discounted_payoffs_actif[step, :] = (total_payment * discount)
+            
+            # --------------------------------------------------------------------------------------------------------------------------------
+            #Part put barrière
+            filter_df = df.loc[self.monte_carlo.observation_dates]
+            #Je regarde le plus petit ratio de prix sur toutes les observations dates 
+            min_price_ratios = filter_df.min(axis=0) / initial_prices
+            #Si le plus petit des ratios est inférieur à la barrière put alors cette barrière a été franchit
+            put_condition = min_price_ratios <= self.put_barrier
+            final_price_ratios = filter_df.iloc[-1].values / initial_prices
 
+            #Boucle sur toutes les simulations
+            for i in range(len(no_redemption_condition)):
+                #Si il n'y a pas eu déjà de redemption, que le barrière put a au moins été franchit une fois et que le dernier prix est inférieur au prix initial alors il faut imputer la perte
+                if no_redemption_condition[i] and put_condition[i] and (final_price_ratios[i]<1):
+                    
+                    # J'annule tous les paiements de coupons précédents
+                    payoffs_actif[:, i] = discounted_payoffs_actif[:,i] = 0
+                    #Inputer la perte sur le dernier payoff
+                    payoffs_actif[-1, i] = self.nominal * final_price_ratios[i]
+
+                    discount = self.discount_factor(num_steps, num_steps)
+                    discounted_payoffs_actif[-1, i] = (payoffs_actif[-1, i] * discount)
+            # --------------------------------------------------------------------------------------------------------------------------------
+                    
             # Créer des DataFrames pour les payoffs et les payoffs actualisés et les ajouter aux listes
             df_payoffs = pd.DataFrame(payoffs_actif, index= self.monte_carlo.observation_dates, columns=[f'Simulation {sim+1}' for sim in range(num_simulations)])
             df_discounted_payoffs = pd.DataFrame(discounted_payoffs_actif, index= self.monte_carlo.observation_dates,  columns=[f'Simulation {sim+1}' for sim in range(num_simulations)])

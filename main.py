@@ -40,7 +40,7 @@ if __name__ == '__main__':
                             risk_free_rate=0.02,
                             num_simu=2,
                             day_conv=360,
-                            seed=10,
+                            seed=27,
                             volatilities = volatilities,
                             observation_frequency='monthly')
     
@@ -72,11 +72,12 @@ if __name__ == '__main__':
     '''
 
     # Paramètres hypothétiques pour l'initialisation d'Autocall
-    nominal_value = 1000  # La valeur nominale du produit structuré
-    coupon_rate = 0.05  # Taux de coupon, par exemple 5%
-    coupon_barrier = 1.1  # Barrière de coupon, par exemple 110%
-    autocall_barrier = 1.15  # Barrière d'autocall, par exemple 120%
-    risk_free_rate = 0.02  # Taux sans risque
+    nominal_value = 1000  
+    coupon_rate = 0.05  
+    coupon_barrier = 1.1 
+    put_barrier = 0.8 
+    autocall_barrier = 1.2
+    risk_free_rate = 0.02 
 
     # Initialisation d'Autocall avec l'objet MonteCarlo
     autocall = Autocall(
@@ -85,6 +86,7 @@ if __name__ == '__main__':
         coupon_rate=coupon_rate,
         coupon_barrier=coupon_barrier,
         autocall_barrier=autocall_barrier,
+        put_barrier = put_barrier,
         risk_free=risk_free_rate
     )
 
