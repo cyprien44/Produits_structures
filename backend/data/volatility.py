@@ -1,89 +1,125 @@
 from scipy.optimize import fsolve
 from datetime import datetime
-import yfinance as yf
 import pandas as pd
 from backend.models import Models
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 import matplotlib.dates
+import json
+from dateutil.relativedelta import relativedelta
+
+
+pd.options.mode.chained_assignment = None  # default='warn'
+
+def split_equity_info(equity_info):
+    components = equity_info.split()
+    ticker = components[0].replace("('", "")
+    maturity_date = components[2]
+    option_type = components[3][0]  # 'C' or 'P'
+    strike = components[3][1:]
+    return pd.Series([ticker, option_type, maturity_date, strike])
+
+def read_bloomberg_data(file_path):
+    with open(file_path, 'r') as f:
+        data = json.load(f)
+    df = pd.DataFrame(data)
+    df = df.transpose()
+    df = df.rename(columns={df.columns[0]: 'Last_Price'})
+    df = df.reset_index()
+    df[['Ticker', 'Option_Type', 'Maturity_Date', 'Strike']] = df['index'].apply(split_equity_info)
+    df = df.drop(columns=['index'])
+    df['Option_Type'] = df['Option_Type'].map({'C': 'call', 'P': 'put'})
+    df['Strike'] = df['Strike'].astype(float)
+    df['Maturity_Date'] = pd.to_datetime(df['Maturity_Date'], format='%m/%d/%y')
+    df_dict = {ticker: group.drop(columns='Ticker') for ticker, group in df.groupby('Ticker')}
+    return df_dict
+
+
+def error_function(volatility, market_price, strike, time_to_maturity, risk_free_rate, dividend_yield,
+                   spot_price, option_type):
+    model = Models(spot_price, strike, risk_free_rate, time_to_maturity, dividend_yield, volatility)
+    if option_type == 'call':
+        model_price = model.black_scholes('call')
+    else:
+        model_price = model.black_scholes('put')
+    error = model_price - market_price
+    return error
+
 
 class Volatility:
     def __init__(self, stock, pricing_date, rate):
         self.spot_price = stock.spot_price
-        self.yf_tickers = stock.ticker.split()[0]
-        self.pricing_date = pricing_date
+        self.tickers = stock.ticker.split()[0]
+        self.pricing_date = datetime.strptime(pricing_date,"%Y%m%d")
         self.rate = rate
         self.dividend_yield = stock.dividend_yield
         self.volatility_surface = self.calculate_volatility_surface()
 
     def calculate_volatility_surface(self):
-        option_chain_dates = yf.Ticker(self.yf_tickers).options
-        volatility_surface = pd.DataFrame()
+        bloomberg_data = read_bloomberg_data('backend/data/option.json')
+        option_data = bloomberg_data[self.tickers]
+        option_data['Moneyness'] = option_data['Strike'].apply(lambda x: x / self.spot_price)
 
-        for date in option_chain_dates:
-            option_chain = yf.Ticker(self.yf_tickers).option_chain(date)
-            calls, puts = self.filter_moneyness(option_chain.calls, option_chain.puts)
+        calls, puts = self.filter_moneyness(option_data)
 
-            # Add the expiry date to the calls and puts dataframes
-            calls['expiry_date'] = date
-            puts['expiry_date'] = date
-
-            r = self.rate.interpolate_rate(date=datetime.strptime(date, "%Y-%m-%d").strftime("%Y%m%d"))
+        for date in option_data['Maturity_Date'].unique():
+            r = self.rate.interpolate_rate(date=date)
             d = self.dividend_yield
 
-            def error_function(volatility, market_price, strike, time_to_maturity, risk_free_rate, dividend_yield,
-                               spot_price, option_type):
-                model = Models(spot_price, strike, risk_free_rate, time_to_maturity, dividend_yield, volatility)
-                if option_type == 'call':
-                    model_price = model.black_scholes('call')
-                else:
-                    model_price = model.black_scholes('put')
-                error = model_price - market_price
-                return error
+            volatility_surface = pd.DataFrame()
 
             # Calculate implied volatility for calls and puts
-            calls['implied_Volatility'] = calls.apply(lambda row: fsolve(error_function, 0.2, args=(row['lastPrice'], row['strike'], (datetime.strptime(date, "%Y-%m-%d") - datetime.strptime(self.pricing_date,"%Y%m%d")).days / 365.0, r, d,self.spot_price, 'call'))[0], axis=1)
-            puts['implied_Volatility'] = puts.apply(lambda row: fsolve(error_function, 0.2, args=(row['lastPrice'], row['strike'], (datetime.strptime(date, "%Y-%m-%d") - datetime.strptime(self.pricing_date,"%Y%m%d")).days / 365.0, r, d,self.spot_price, 'put'))[0], axis=1)
+            calls['Implied_Volatility'] = calls.apply(lambda row: fsolve(error_function, 0.2, args=(row['Last_Price'], row['Strike'], (date - self.pricing_date).days / 365.0, r, d, self.spot_price, 'call'))[0], axis=1)
+            puts['Implied_Volatility'] = puts.apply(lambda row: fsolve(error_function, 0.2, args=(row['Last_Price'], row['Strike'], (date - self.pricing_date).days / 365.0, r, d, self.spot_price, 'put'))[0], axis=1)
 
             # Concatenate calls and puts and add to the volatility surface DataFrame
             volatility_surface = pd.concat([volatility_surface, pd.concat([puts, calls])])
 
-            def date_to_years(date):
-                return (datetime.strptime(date, "%Y-%m-%d") - datetime.strptime(self.pricing_date,
-                                                                                "%Y%m%d")).days / 365.0
+            # Pour l'interpolation
+            def calculate_years(date):
+                return (date - self.pricing_date).days / 365.0
+            volatility_surface['Dates_In_Years'] = volatility_surface['Maturity_Date'].apply(calculate_years)
 
-            volatility_surface['dates_in_years'] = volatility_surface['expiry_date'].apply(date_to_years)
+        # Filtre par maturité
+        three_months_later = self.pricing_date + relativedelta(months=3)
+        volatility_surface = volatility_surface[volatility_surface['Maturity_Date'] > three_months_later]
+
+        # On filtre les extrêmes
+        q_low = volatility_surface['Implied_Volatility'].quantile(0.10)
+        q_high = volatility_surface['Implied_Volatility'].quantile(0.90)
+        volatility_surface = volatility_surface[(volatility_surface['Implied_Volatility'] >= q_low) & (
+                    volatility_surface['Implied_Volatility'] <= q_high)]
 
         return volatility_surface
 
-    def filter_moneyness(self, calls, puts, moneyness_range=[0.6, 1.6], volume_threshold=10):
-        calls = calls[(calls['strike'] > self.spot_price) &
-                      (calls['strike'] < moneyness_range[1] * self.spot_price) &
-                      (calls['volume'] > volume_threshold)]
-        puts = puts[(puts['strike'] > moneyness_range[0] * self.spot_price) &
-                    (puts['strike'] < self.spot_price) &
-                    (puts['volume'] > volume_threshold)]
+    def filter_moneyness(self, option_df, moneyness_range=[0.85, 1.15]):
+        option_df = option_df.groupby('Maturity_Date').filter(lambda group: group['Moneyness'].max() > 1.1)
+        calls = option_df[option_df['Option_Type'] == 'call']
+        calls = calls[(calls['Strike'] > self.spot_price) &
+                      (calls['Strike'] < moneyness_range[1] * self.spot_price)]
+        puts = option_df[option_df['Option_Type'] == 'put']
+        puts = puts[(puts['Strike'] > moneyness_range[0] * self.spot_price) &
+                    (puts['Strike'] < self.spot_price)]
         return calls, puts
 
     def plot_volatility_surface(self):
-        # Create a new figure
         fig = plt.figure(figsize=(10, 6))
         ax = fig.add_subplot(111, projection='3d')
-        # Convert dates to datetime and then to numerical format for plotting
-        self.volatility_surface['expiry_date'] = pd.to_datetime(self.volatility_surface['expiry_date'])
-        self.volatility_surface['date_num'] = matplotlib.dates.date2num(self.volatility_surface['expiry_date'])
-        # Create a surface plot
-        ax.plot_trisurf(self.volatility_surface['date_num'], self.volatility_surface['strike'],
-                        self.volatility_surface['implied_Volatility'], cmap=cm.coolwarm, linewidth=0.2)
-        # Format the x-axis to display dates
+
+        self.volatility_surface['Maturity_Date'] = pd.to_datetime(self.volatility_surface['Maturity_Date'])
+        self.volatility_surface['Date_Num'] = matplotlib.dates.date2num(self.volatility_surface['Maturity_Date'])
+
+        ax.plot_trisurf(self.volatility_surface['Date_Num'], self.volatility_surface['Strike'],
+                        self.volatility_surface['Implied_Volatility'], cmap=cm.coolwarm, linewidth=0.2)
+
         ax.xaxis.set_major_locator(matplotlib.dates.YearLocator())
         ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y'))
-        # Set labels
+
         ax.set_xlabel('Date')
         ax.set_ylabel('Strike Price')
         ax.set_zlabel('Implied Volatility')
-        # Set title
+
         ax.set_title('Implied Volatility Surface')
-        # Show the plot
+
         plt.show()

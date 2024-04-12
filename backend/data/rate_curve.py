@@ -59,7 +59,7 @@ class ZeroCouponCurve:
         Tracer la courbe des taux.
         """
         plt.figure(figsize=(10, 6))
-        plt.plot(self.data.columns, self.data.values[0])
+        plt.plot(self.data.index, self.data['rates'])
         plt.title('Courbe des taux')
         plt.xlabel('Date')
         plt.ylabel('Taux')
@@ -70,7 +70,7 @@ class ZeroCouponCurve:
         Interpole la courbe des taux pour une date cible.
         """
         # Convertir la date en année
-        date_in_year = (datetime.strptime(date, "%Y%m%d") - datetime.strptime(self.date, '%Y%m%d')).days / 365.0
+        date_in_year = (date - datetime.strptime(self.date, '%Y%m%d')).days / 365.0
 
         # Créer une fonction d'interpolation
         interp_func = interp1d(self.data['maturity_in_years'], self.data['rates'], kind='linear', fill_value='extrapolate')

@@ -6,6 +6,7 @@ class StockData:
     def __init__(self, ticker, pricing_date, rate):
         """
         Initialisation des données du sous-jacent.
+        :param ticker: Ticker du sous-jacent.
         :param spot_price: Prix spot du sous-jacent.
         :param dividend_yield: Rendement du dividende annuel.
         """

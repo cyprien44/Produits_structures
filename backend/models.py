@@ -22,7 +22,7 @@ class Models:
             return self.strike * np.exp(-self.risk_free_rate * self.maturity) * norm.cdf(-d2) - self.spot_price * np.exp(-self.dividend_yield * self.maturity) * norm.cdf(-d1)
 
 class Autocall:
-    def __init__(self, monte_carlo, nominal, coupon_rate, coupon_barrier, autocall_barrier,put_barrier, risk_free):
+    def __init__(self, monte_carlo, nominal, coupon_rate, coupon_barrier, autocall_barrier, put_barrier, risk_free):
         self.monte_carlo = monte_carlo
         self.nominal = nominal
         self.coupon_rate = coupon_rate
