@@ -11,9 +11,9 @@ if __name__ == '__main__':
     US_rate.plot_rate_curve()
 
     # Récupération des données des sous-jacents
-    Apple = StockData(ticker='AAPL US Equity', pricing_date='20240301', rate=US_rate)
-    Microsoft = StockData(ticker='MSFT US Equity', pricing_date='20240301', rate=US_rate)
-    Google = StockData(ticker='GOOGL US Equity', pricing_date='20240301', rate=US_rate)
+    Apple = StockData(ticker='AAPL US Equity', pricing_date='20240301')
+    Microsoft = StockData(ticker='MSFT US Equity', pricing_date='20240301')
+    Google = StockData(ticker='GOOGL US Equity', pricing_date='20240301')
 
     '''Surface de volatilité implicite'''
     # Affichage de la surface de volatilité implicite

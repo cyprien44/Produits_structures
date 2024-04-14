@@ -54,7 +54,7 @@ class Volatility:
         self.pricing_date = datetime.strptime(pricing_date,"%Y%m%d")
         self.rate = rate
         self.dividend_yield = stock.dividend_yield
-        self.volatility_surface = self.calculate_volatility_surface()
+        self.data = self.calculate_volatility_surface()
 
     def calculate_volatility_surface(self):
         bloomberg_data = read_bloomberg_data('backend/data/option.json')
@@ -107,11 +107,11 @@ class Volatility:
         fig = plt.figure(figsize=(10, 6))
         ax = fig.add_subplot(111, projection='3d')
 
-        self.volatility_surface['Maturity_Date'] = pd.to_datetime(self.volatility_surface['Maturity_Date'])
-        self.volatility_surface['Date_Num'] = matplotlib.dates.date2num(self.volatility_surface['Maturity_Date'])
+        self.data['Maturity_Date'] = pd.to_datetime(self.data['Maturity_Date'])
+        self.data['Date_Num'] = matplotlib.dates.date2num(self.data['Maturity_Date'])
 
-        ax.plot_trisurf(self.volatility_surface['Date_Num'], self.volatility_surface['Strike'],
-                        self.volatility_surface['Implied_Volatility'], cmap=cm.coolwarm, linewidth=0.2)
+        ax.plot_trisurf(self.data['Date_Num'], self.data['Strike'],
+                        self.data['Implied_Volatility'], cmap=cm.coolwarm, linewidth=0.2)
 
         ax.xaxis.set_major_locator(matplotlib.dates.YearLocator())
         ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter('%Y'))

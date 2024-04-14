@@ -23,19 +23,17 @@ class MonteCarlo:
         self.num_time_steps = int(self.maturity * day_conv)
         self.delta_t = self.maturity / day_conv
         self.seed = seed
-        self.generate_correlated_shocks()
-        self.simulations = self.simulate_correlated_prices()
-        self.stocks_nb = len(self.simulations.T)
 
         #part Cyprien
-        '''self.simulation_dates = pd.date_range(start=self.start_date, end=self.end_date, freq='B').normalize()
-        self.risk_free_rate = risk_free_rate
-        self.volatilities = np.array([volatilities[stock.ticker] for stock in stocks])
+        self.simulation_dates = pd.date_range(start=self.start_date, end=self.end_date, freq='B').normalize()
         self.num_steps = None
         self.observation_frequency = observation_frequency
-        self.generate_correlated_shocks()
         self.observation_dates = self.generate_observation_dates()
-        self.simulations = self.simulate_prices()'''
+        #self.simulations = self.simulate_prices()
+
+        self.generate_correlated_shocks()
+        self.simulations = self.simulate_correlated_prices().T
+        self.stocks_nb = len(self.simulations)
 
     def generate_observation_dates(self):
         """
@@ -109,9 +107,9 @@ class MonteCarlo:
         volatilities = []
         for stock in self.stocks:
             # Prepare the data for interpolation
-            x = stock.volatility_surface.volatility_surface['Dates_In_Years']
-            y = stock.volatility_surface.volatility_surface['Strike']
-            z = stock.volatility_surface.volatility_surface['Implied_Volatility']
+            x = stock.volatility_surface.data['Dates_In_Years']
+            y = stock.volatility_surface.data['Strike']
+            z = stock.volatility_surface.data['Implied_Volatility']
             points = np.array([x, y]).T
 
             # Create the interpolator

@@ -1,9 +1,10 @@
 import pandas as pd
 import json
 from backend.data.volatility import Volatility
+from backend.data.rate_curve import ZeroCouponCurve
 
 class StockData:
-    def __init__(self, ticker, pricing_date, rate):
+    def __init__(self, ticker, pricing_date):
         """
         Initialisation des données du sous-jacent.
         :param ticker: Ticker du sous-jacent.
@@ -13,8 +14,9 @@ class StockData:
         self.ticker = ticker
         self.spot_price = self.get_spot_price()
         self.dividend_yield = self.get_dividend_yield()
-        self.volatility_surface = Volatility(self, pricing_date, rate)
-        self.rate_curve = rate
+        self.rate_curve = ZeroCouponCurve(date=pricing_date)
+        self.volatility_surface = Volatility(self, pricing_date, self.rate_curve)
+
 
     def get_dividend_yield(self):
         with open('backend/data/dividend_yield_data.json', 'r') as file:
