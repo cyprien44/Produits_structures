@@ -35,7 +35,7 @@ else:
     with cols[1]:
         num_simu = st.number_input("Nombre de simulations", value=100, format="%d", key='num_simu')
     with cols[2]:
-        day_conv = st.number_input("Nombre de steps", value=360, format="%d", key='day_conv')
+        day_conv = st.selectbox("Date de convention", [360, 365], key='day_conv')
         
 
     # Paramètres de simulation - Deuxième ligne
@@ -108,8 +108,7 @@ else:
                             coupon_rate=coupon_rate,
                             coupon_barrier=coupon_barrier,
                             autocall_barrier=autocall_barrier,
-                            put_barrier=put_barrier,
-                            risk_free=0)
+                            put_barrier=put_barrier)
 
         plot_simulations_streamlit(autocall)
 

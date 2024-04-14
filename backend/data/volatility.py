@@ -51,7 +51,7 @@ class Volatility:
     def __init__(self, stock, pricing_date, rate):
         self.spot_price = stock.spot_price
         self.tickers = stock.ticker.split()[0]
-        self.pricing_date = datetime.strptime(pricing_date,"%Y%m%d")
+        self.pricing_date = datetime.strptime(pricing_date, "%Y%m%d")
         self.rate = rate
         self.dividend_yield = stock.dividend_yield
         self.data = self.calculate_volatility_surface()

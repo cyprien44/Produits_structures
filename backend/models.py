@@ -3,6 +3,8 @@ import pandas as pd
 from scipy.stats import norm
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from backend.data.rate_curve import ZeroCouponCurve
+from datetime import timedelta
 
 class Models:
     def __init__(self, spot_price, strike, risk_free_rate, maturity, dividend_yield, volatility):
@@ -14,35 +16,40 @@ class Models:
         self.volatility = volatility
 
     def black_scholes(self, call_or_put='call'):
-        d1 = (np.log(self.spot_price / self.strike) + (self.risk_free_rate - self.dividend_yield + 0.5 * self.volatility ** 2) * self.maturity) / (self.volatility * np.sqrt(self.maturity))
+        d1 = (np.log(self.spot_price / self.strike) + (
+                    self.risk_free_rate - self.dividend_yield + 0.5 * self.volatility ** 2) * self.maturity) / (
+                         self.volatility * np.sqrt(self.maturity))
         d2 = d1 - self.volatility * np.sqrt(self.maturity)
         if call_or_put == 'call':
-            return self.spot_price * np.exp(-self.dividend_yield * self.maturity) * norm.cdf(d1) - self.strike * np.exp(-self.risk_free_rate * self.maturity) * norm.cdf(d2)
+            return self.spot_price * np.exp(-self.dividend_yield * self.maturity) * norm.cdf(d1) - self.strike * np.exp(
+                -self.risk_free_rate * self.maturity) * norm.cdf(d2)
         elif call_or_put == 'put':
-            return self.strike * np.exp(-self.risk_free_rate * self.maturity) * norm.cdf(-d2) - self.spot_price * np.exp(-self.dividend_yield * self.maturity) * norm.cdf(-d1)
+            return self.strike * np.exp(-self.risk_free_rate * self.maturity) * norm.cdf(
+                -d2) - self.spot_price * np.exp(-self.dividend_yield * self.maturity) * norm.cdf(-d1)
+
 
 class Autocall:
-    def __init__(self, monte_carlo, nominal, coupon_rate, coupon_barrier, autocall_barrier, put_barrier, risk_free):
+    def __init__(self, monte_carlo, nominal, coupon_rate, coupon_barrier, autocall_barrier, put_barrier):
         self.monte_carlo = monte_carlo
         self.nominal = nominal
         self.coupon_rate = coupon_rate
         self.coupon_barrier = coupon_barrier
         self.autocall_barrier = autocall_barrier
         self.put_barrier = put_barrier
-        self.risk_free = risk_free
+        self.risk_free = ZeroCouponCurve(date=self.monte_carlo.start_date.strftime("%Y%m%d"))
         self.payoffs, self.payoffs_discount = self.generate_payoffs()
         self.average_price = None
         self.overall_average = None
-        self.figs = []  
-
+        self.figs = []
 
     def discount_factor(self, step, total_steps):
         time = step / total_steps * self.monte_carlo.maturity  # Convertir en fraction de la maturité totale
-        return np.exp(-self.risk_free * time)
-    
+        date = self.monte_carlo.start_date + timedelta(days=time * self.monte_carlo.day_conv)
+        return np.exp(-self.risk_free.interpolate_rate(date=date) * time)
+
     def plot_simulations(self):
         self.figs = []  # Initialiser une liste pour stocker les figures si vous avez plusieurs actifs
-        
+
         for actif_index, (df, stock) in enumerate(zip(self.monte_carlo.simulations, self.monte_carlo.stocks)):
             fig, ax = plt.subplots(figsize=(10, 6))
 
@@ -54,9 +61,12 @@ class Autocall:
                 ax.plot(df.index, df[sim_index], lw=1)
 
             # Ajouter une ligne horizontale pour la barrière de coupon et d'autocall
-            ax.axhline(y=self.coupon_barrier * df.iloc[0,0], color='g', linestyle='--', label=f'Coupon Barrier ({round(self.coupon_barrier*df.iloc[0,0], 1)})')
-            ax.axhline(y=self.autocall_barrier * df.iloc[0,0], color='r', linestyle='--', label=f'Autocall Barrier ({round(self.autocall_barrier*df.iloc[0,0], 1)})')
-            ax.axhline(y=self.put_barrier * df.iloc[0,0], color='orange', linestyle='--', label=f'Put Barrier ({round(self.put_barrier*df.iloc[0,0], 1)})')
+            ax.axhline(y=self.coupon_barrier * df.iloc[0, 0], color='g', linestyle='--',
+                       label=f'Coupon Barrier ({round(self.coupon_barrier * df.iloc[0, 0], 1)})')
+            ax.axhline(y=self.autocall_barrier * df.iloc[0, 0], color='r', linestyle='--',
+                       label=f'Autocall Barrier ({round(self.autocall_barrier * df.iloc[0, 0], 1)})')
+            ax.axhline(y=self.put_barrier * df.iloc[0, 0], color='orange', linestyle='--',
+                       label=f'Put Barrier ({round(self.put_barrier * df.iloc[0, 0], 1)})')
 
             # Ajouter une ligne verticale pour chaque date d'observation
             for obs_date in self.monte_carlo.observation_dates:
@@ -76,7 +86,6 @@ class Autocall:
 
             plt.tight_layout()
             self.figs.append(fig)  # Ajouter la figure à la liste des figures
-
 
     def show_simulations(self):
         # S'assurer que les figures ont été générées
@@ -104,6 +113,7 @@ class Autocall:
             # Parcourir chaque étape de simulation pour l'actif actuel
             for step, time_step in enumerate(self.monte_carlo.observation_dates):
                 # Obtenir les prix courants et les prix initiaux pour calculer les ratios de prix
+                df = pd.DataFrame(df)
                 current_prices = df.loc[time_step].values
                 initial_prices = df.iloc[0].values
                 price_ratios = current_prices / initial_prices
@@ -129,44 +139,45 @@ class Autocall:
                     for i in range(len(no_redemption_condition)):
                         if bool(no_redemption_condition[i]):
                             no_redemption_condition[i] = autocall_condition[i] = True
-                    
+
                 # Calculer les paiements de coupon et de rachat, puis le paiement total pour chaque simulation
                 coupon_payment = self.nominal * self.coupon_rate * coupon_condition * no_redemption_condition
                 redemption_payment = self.nominal * autocall_condition * no_redemption_condition
                 total_payment = coupon_payment + redemption_payment
-           
+
                 # Stocker le paiement total et le paiement total actualisé à l'étape courante
                 payoffs_actif[step, :] = total_payment
                 discount = self.discount_factor(step, num_steps)
                 discounted_payoffs_actif[step, :] = (total_payment * discount)
-            
+
             # --------------------------------------------------------------------------------------------------------------------------------
-            #Part put barrière
+            # Part put barrière
             filter_df = df.loc[self.monte_carlo.observation_dates]
-            #Je regarde le plus petit ratio de prix sur toutes les observations dates 
+            # Je regarde le plus petit ratio de prix sur toutes les observations dates
             min_price_ratios = filter_df.min(axis=0) / initial_prices
-            #Si le plus petit des ratios est inférieur à la barrière put alors cette barrière a été franchit
+            # Si le plus petit des ratios est inférieur à la barrière put alors cette barrière a été franchit
             put_condition = min_price_ratios <= self.put_barrier
             final_price_ratios = filter_df.iloc[-1].values / initial_prices
 
-            #Boucle sur toutes les simulations
+            # Boucle sur toutes les simulations
             for i in range(len(no_redemption_condition)):
-                #Si il n'y a pas eu déjà de redemption, que le barrière put a au moins été franchit une fois et que le dernier prix est inférieur au prix initial alors il faut imputer la perte
-                if no_redemption_condition[i] and put_condition[i] and (final_price_ratios[i]<1):
-                    
+                # Si il n'y a pas eu déjà de redemption, que le barrière put a au moins été franchit une fois et que le dernier prix est inférieur au prix initial alors il faut imputer la perte
+                if no_redemption_condition[i] and put_condition[i] and (final_price_ratios[i] < 1):
                     # J'annule tous les paiements de coupons précédents
-                    payoffs_actif[:, i] = discounted_payoffs_actif[:,i] = 0
-                    #Inputer la perte sur le dernier payoff
+                    payoffs_actif[:, i] = discounted_payoffs_actif[:, i] = 0
+                    # Inputer la perte sur le dernier payoff
                     payoffs_actif[-1, i] = self.nominal * final_price_ratios[i]
 
                     discount = self.discount_factor(num_steps, num_steps)
                     discounted_payoffs_actif[-1, i] = (payoffs_actif[-1, i] * discount)
             # --------------------------------------------------------------------------------------------------------------------------------
-                    
+
             # Créer des DataFrames pour les payoffs et les payoffs actualisés et les ajouter aux listes
-            df_payoffs = pd.DataFrame(payoffs_actif, index= self.monte_carlo.observation_dates, columns=[f'Simulation {sim+1}' for sim in range(num_simulations)])
-            df_discounted_payoffs = pd.DataFrame(discounted_payoffs_actif, index= self.monte_carlo.observation_dates,  columns=[f'Simulation {sim+1}' for sim in range(num_simulations)])
-            
+            df_payoffs = pd.DataFrame(payoffs_actif, index=self.monte_carlo.observation_dates,
+                                      columns=[f'Simulation {sim + 1}' for sim in range(num_simulations)])
+            df_discounted_payoffs = pd.DataFrame(discounted_payoffs_actif, index=self.monte_carlo.observation_dates,
+                                                 columns=[f'Simulation {sim + 1}' for sim in range(num_simulations)])
+
             payoffs_dataframes.append(df_payoffs)
             discounted_payoffs_dataframes.append(df_discounted_payoffs)
 
@@ -190,7 +201,8 @@ class Autocall:
             total_discounted = df.sum(axis=0)  # Sum along rows to get the sum for each simulation
             # Ajouter la somme des paiements actualisés pour cette DataFrame à la liste
             price_by_simul.append(total_discounted)
-            average_price.append(total_discounted.mean())  # Calculate the mean across all simulations for the current asset
+            average_price.append(
+                total_discounted.mean())  # Calculate the mean across all simulations for the current asset
 
         self.average_price = average_price
         # Calculer la moyenne globale sur tous les actifs
@@ -205,6 +217,3 @@ class Autocall:
             print(f"Prix moyen final pour {stock.ticker}: {value:.2f} €")  # Utilisation de `stock.name`
 
         print(f"Prix moyen final sur tous les actifs: {self.overall_average:.2f} €")
-
-
-

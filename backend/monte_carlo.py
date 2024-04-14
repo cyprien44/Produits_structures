@@ -15,7 +15,7 @@ class MonteCarlo:
         self.spots = np.array([stock.spot_price for stock in stocks])
         self.start_date = datetime.strptime(start_date, "%Y-%m-%d")
         self.end_date = datetime.strptime(end_date, "%Y-%m-%d")
-        self.maturity = (self.end_date - self.start_date).days / 365
+        self.maturity = (self.end_date - self.start_date).days / day_conv
         self.dividend_yields = np.array([stock.dividend_yield for stock in stocks])
         self.correlation_matrix = get_correlation([stock.ticker for stock in stocks])
         self.num_simu = num_simu
@@ -25,14 +25,13 @@ class MonteCarlo:
         self.seed = seed
 
         #part Cyprien
-        self.simulation_dates = pd.date_range(start=self.start_date, end=self.end_date, freq='B').normalize()
+        self.simulation_dates = pd.date_range(start=self.start_date, end=self.end_date).normalize()
         self.num_steps = None
         self.observation_frequency = observation_frequency
         self.observation_dates = self.generate_observation_dates()
-        #self.simulations = self.simulate_prices()
 
         self.generate_correlated_shocks()
-        self.simulations = self.simulate_correlated_prices().T
+        self.simulations = self.simulate_correlated_prices()
         self.stocks_nb = len(self.simulations)
 
     def generate_observation_dates(self):
@@ -126,7 +125,13 @@ class MonteCarlo:
                 simu[t, :, i] = simu[t - 1, :, i] * np.exp(
                     (rate - self.dividend_yields[i] - 0.5 * volatility ** 2) * dt + volatility * self.z[t - 1, :, i])
 
-        return simu
+        dataframes = []
+        for asset_index in range(simu.shape[2]):
+            asset_data = simu[:, :, asset_index]
+            df = pd.DataFrame(asset_data, index=self.simulation_dates, columns=[f'{sim+1}' for sim in range(self.num_simu)])
+            dataframes.append(df)
+
+        return dataframes
 
     def show_simulations(self):
         num_rows = int(np.ceil(np.sqrt(self.stocks_nb)))
