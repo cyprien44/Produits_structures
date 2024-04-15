@@ -284,7 +284,7 @@ class Autocall:
 
         total_discounted = self.payoffs_discount.sum(axis=0)  # Sum along rows to get the sum of all discount flows for each simulation
         average_price =  total_discounted.mean()  # Calculate the mean across all simulations for the current asset
-        self.average_price = average_price
+        self.average_price = average_price / self.nominal * 100
 
     '''def print_payoffs_dataframes(self):
             """

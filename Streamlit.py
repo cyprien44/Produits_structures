@@ -27,13 +27,12 @@ else:
     # Liste prédéfinie des sous-jacents disponibles pour la sélection
 
     selected_strat = st.selectbox("Choisissez la stratégie souhaitée", ["worst-off", "best-off", "mono-asset"], key='strat_choice')
-    selected_stocks_keys_multi = st.multiselect("Choisissez les sous-jacents pour la strat Worst-Of et Best-Of", list(name_to_ticker.keys()), default=list(name_to_ticker.keys()))
-    selected_stock_keys_mono = st.selectbox("Choisissez le sous-jacent pour la stratégie Mono-jacent", list(name_to_ticker.keys()), key='stock_mono')
 
     if selected_strat == "mono-asset":
-        selected_stocks_keys = selected_stock_keys_mono
+        selected_stocks_keys = st.selectbox("Choisissez le sous-jacent pour la stratégie Mono-jacent", list(name_to_ticker.keys()), key='stock_mono')
     else:
-        selected_stocks_keys = selected_stocks_keys_multi
+        selected_stocks_keys = st.multiselect("Choisissez les sous-jacents pour la strat Worst-Of et Best-Of", list(name_to_ticker.keys()), default=list(name_to_ticker.keys()))
+        
 
     # Paramètres de simulation - Première ligne
     st.header("Paramètres de simulation")
@@ -138,9 +137,9 @@ else:
         st.markdown("---")
         st.markdown(f"""
             <div style='text-align: center;'>
-                <span style='font-size: 1.5em;'>Prix moyen final:</span>
+                <span style='font-size: 3.5em;'>Prix final stratégie {selected_strat}:</span>
                 <br>
-                <span style='font-size: 2.5em;'>{autocall.average_price:.2f} €</span>
+                <span style='font-size: 2.5em;'>{autocall.average_price:.2f} %</span>
             </div>
             """, unsafe_allow_html=True)
 
