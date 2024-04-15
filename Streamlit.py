@@ -16,6 +16,8 @@ if start_date >= end_date:
     st.error("La date de fin doit être postérieure à la date de début.")
 else:
 
+    st.subheader("Stratégie") 
+
     name_to_ticker = {
     "Apple": "AAPL US Equity",
     "Microsoft": "MSFT US Equity",
@@ -23,8 +25,15 @@ else:
 }
 
     # Liste prédéfinie des sous-jacents disponibles pour la sélection
-    #available_stocks_keys = ['Apple', 'Microsoft', 'Google']
-    selected_stocks_keys = st.multiselect("Choisissez les sous-jacents", list(name_to_ticker.keys()), default=list(name_to_ticker.keys()))
+
+    selected_strat = st.selectbox("Choisissez la stratégie souhaitée", ["worst-off", "best-off", "mono-asset"], key='strat_choice')
+    selected_stocks_keys_multi = st.multiselect("Choisissez les sous-jacents pour la strat Worst-Of et Best-Of", list(name_to_ticker.keys()), default=list(name_to_ticker.keys()))
+    selected_stock_keys_mono = st.selectbox("Choisissez le sous-jacent pour la stratégie Mono-jacent", list(name_to_ticker.keys()), key='stock_mono')
+
+    if selected_strat == "mono-asset":
+        selected_stocks_keys = selected_stock_keys_mono
+    else:
+        selected_stocks_keys = selected_stocks_keys_multi
 
     # Paramètres de simulation - Première ligne
     st.header("Paramètres de simulation")
@@ -104,6 +113,7 @@ else:
             show_montecarlo_simulations(monte_carlo)
 
         autocall = Autocall(monte_carlo=monte_carlo,
+                            strat = selected_strat,
                             nominal=nominal,
                             coupon_rate=coupon_rate,
                             coupon_barrier=coupon_barrier,
@@ -115,22 +125,22 @@ else:
         autocall.calculate_average_present_value()
 
         st.markdown("---")
-        for stock, df in zip(monte_carlo.stocks, autocall.payoffs):
-            st.write(f"Payoffs DataFrame for {stock.ticker}:")  # Utiliser .ticker ou .name
-            st.dataframe(df)
+        
+        if selected_strat == "mono-asset":
+        
+            st.write(f"Payoffs DataFrame for stratégie{selected_strat} with stock {autocall.monte_carlo.stocks}:")
+            st.dataframe(autocall.payoffs)
+        else:
+            st.write(f"Payoffs DataFrame for stratégie {selected_strat}:")
+            st.dataframe(autocall.payoffs)
 
-        st.markdown("---")
-        st.markdown("#### Prix moyen final pour chaque actif:")
-        cols = st.columns(len(autocall.average_price))
-        for stock, (col, value) in zip(monte_carlo.stocks, zip(cols, autocall.average_price)):
-            col.metric(label=stock.ticker, value=f"{value:.2f} €")  # Utiliser .ticker ou .name
 
         st.markdown("---")
         st.markdown(f"""
             <div style='text-align: center;'>
-                <span style='font-size: 1.5em;'>Prix moyen final sur tous les actifs:</span>
+                <span style='font-size: 1.5em;'>Prix moyen final:</span>
                 <br>
-                <span style='font-size: 2.5em;'>{autocall.overall_average:.2f} €</span>
+                <span style='font-size: 2.5em;'>{autocall.average_price:.2f} €</span>
             </div>
             """, unsafe_allow_html=True)
 

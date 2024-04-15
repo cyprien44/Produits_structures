@@ -70,7 +70,8 @@ class ZeroCouponCurve:
         Interpole la courbe des taux pour une date cible.
         """
         # Convertir la date en année
-        date_in_year = (date - datetime.strptime(self.date, '%Y%m%d')).days / 365.0
+        days = (date - datetime.strptime(self.date, '%Y%m%d')).days
+        date_in_year = days / 365.0
 
         # Créer une fonction d'interpolation
         interp_func = interp1d(self.data['maturity_in_years'], self.data['rates'], kind='linear', fill_value='extrapolate')
