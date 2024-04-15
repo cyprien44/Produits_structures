@@ -217,3 +217,22 @@ class Autocall:
             print(f"Prix moyen final pour {stock.ticker}: {value:.2f} €")  # Utilisation de `stock.name`
 
         print(f"Prix moyen final sur tous les actifs: {self.overall_average:.2f} €")
+
+    def calculate_autocall_probabilities(self):
+        autocall_occurrences = [0] * len(self.monte_carlo.observation_dates)
+        num_simulations = self.monte_carlo.simulations[0].shape[1]
+
+        for step, time_step in enumerate(self.monte_carlo.observation_dates):
+            for df in self.monte_carlo.simulations:
+                current_prices = df.loc[time_step].values
+                initial_prices = df.iloc[0].values
+                price_ratios = current_prices / initial_prices
+                autocall_condition = price_ratios >= self.autocall_barrier
+                autocall_occurrences[step] += np.sum(autocall_condition)
+
+        autocall_probabilities = [occ / num_simulations for occ in autocall_occurrences]
+        autocall_probabilities_dict = {date.strftime('%Y-%m-%d'): prob for date, prob in
+                                       zip(self.monte_carlo.observation_dates, autocall_probabilities)}
+
+        return autocall_probabilities_dict
+
