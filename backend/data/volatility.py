@@ -1,6 +1,7 @@
 from scipy.optimize import fsolve
 from datetime import datetime
 import pandas as pd
+import numpy as np
 from backend.models import Models
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -64,6 +65,10 @@ class Volatility:
         calls, puts = self.filter_moneyness(option_data)
 
         for date in option_data['Maturity_Date'].unique():
+
+            if isinstance(date, np.datetime64):
+                date = date.astype('M8[ms]').astype(datetime)
+
             r = self.rate.interpolate_rate(date=date)
             d = self.dividend_yield
 

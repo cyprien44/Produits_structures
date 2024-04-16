@@ -65,35 +65,7 @@ class MonteCarlo:
         z_uncorrelated = np.random.normal(0.0, 1.0, (self.num_time_steps, self.num_simu, len(self.spots))) * self.delta_t ** 0.5
         self.z = np.einsum('ij, tkj -> tki', L, z_uncorrelated)
 
-    def simulate_prices(self):
-        """
-        Simule les chemins de prix avec des dates de simulation et retourne les résultats sous forme de DataFrames.
-        """
-        dt = self.delta_t
-        simu = np.zeros((self.num_steps, self.num_simu, len(self.spots)))
-        simu[0, :, :] = self.spots
-        
-        for t in range(1, self.num_steps):
-            simu[t] = simu[t-1] * np.exp(
-                (self.risk_free_rate - self.dividend_yields - 0.5 * self.volatilities**2) * dt + self.volatilities * self.z[t-1]
-            )
-
-        dataframes = []
-        for asset_index in range(simu.shape[2]):
-            asset_data = simu[:, :, asset_index]
-            df = pd.DataFrame(asset_data, index=self.simulation_dates, columns=[f'Simulation {sim+1}' for sim in range(self.num_simu)])
-            dataframes.append(df)
-
-        return dataframes
-    
-    def print_simulation_dataframes(self):
-        """Print all simulation DataFrames with stock names."""
-        for stock, df in zip(self.stocks, self.simulations):
-            # Assuming stock has an attribute 'name' for the stock's name, or use 'ticker' as per your setup
-            print(f"Simulation DataFrame for {stock.ticker}:")
-            print(df)
-            print("\n" + "-"*50 + "\n")
-
+   
     def simulate_correlated_prices(self):
         """
         Simule les chemins de prix pour tous les sous-jacents en utilisant les chocs corrélés.
@@ -132,19 +104,3 @@ class MonteCarlo:
             dataframes.append(df)
 
         return dataframes
-
-    def show_simulations(self):
-        num_rows = int(np.ceil(np.sqrt(self.stocks_nb)))
-        num_cols = int(np.ceil(self.stocks_nb / num_rows))
-
-        plt.figure(figsize=(14, 7))
-
-        # Parcourir chaque sous-jacent
-        for i, prices in enumerate(self.simulations.T):
-            plt.subplot(num_rows, num_cols, i + 1)
-            for path in prices:
-                plt.plot(path)
-            plt.title(f'Chemins de prix simulés pour le sous-jacent {i + 1}')
-
-        plt.tight_layout()
-        plt.show()

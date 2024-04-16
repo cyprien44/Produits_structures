@@ -8,7 +8,7 @@ if __name__ == '__main__':
 
     # Récupération de la courbe des taux
     US_rate = ZeroCouponCurve(date='20240301')
-    US_rate.plot_rate_curve()
+    #US_rate.plot_rate_curve()
 
     # Récupération des données des sous-jacents
     Apple = StockData(ticker='AAPL US Equity', pricing_date='20240301')
@@ -31,9 +31,10 @@ if __name__ == '__main__':
                             seed=10)
 
     simulation.show_simulations()
-
+    strat = "worst-off"
     '''autocall = Autocall(monte_carlo=simulation,
                         nominal=1000,
+                        strat = strat, 
                         coupon_rate=0.06,
                         coupon_barrier=1.1,
                         autocall_barrier=1.40,
