@@ -47,54 +47,6 @@ class Autocall:
         date = self.monte_carlo.start_date + timedelta(days=time * self.monte_carlo.day_conv)
         return np.exp(-self.risk_free.interpolate_rate(date=date) * time)
 
-    def plot_simulations(self):
-        self.figs = []  # Initialiser une liste pour stocker les figures si vous avez plusieurs actifs
-
-        for actif_index, (df, stock) in enumerate(zip(self.monte_carlo.simulations, self.monte_carlo.stocks)):
-            fig, ax = plt.subplots(figsize=(10, 6))
-
-            # Convertir l'index en datetime si ce n'est pas déjà le cas
-            df.index = pd.to_datetime(df.index)
-
-            # Tracer chaque simulation pour l'actif courant
-            for sim_index in df.columns:
-                ax.plot(df.index, df[sim_index], lw=1)
-
-            # Ajouter une ligne horizontale pour la barrière de coupon et d'autocall
-            ax.axhline(y=self.coupon_barrier * df.iloc[0, 0], color='g', linestyle='--',
-                       label=f'Coupon Barrier ({round(self.coupon_barrier * df.iloc[0, 0], 1)})')
-            ax.axhline(y=self.autocall_barrier * df.iloc[0, 0], color='r', linestyle='--',
-                       label=f'Autocall Barrier ({round(self.autocall_barrier * df.iloc[0, 0], 1)})')
-            ax.axhline(y=self.put_barrier * df.iloc[0, 0], color='orange', linestyle='--',
-                       label=f'Put Barrier ({round(self.put_barrier * df.iloc[0, 0], 1)})')
-
-            # Ajouter une ligne verticale pour chaque date d'observation
-            for obs_date in self.monte_carlo.observation_dates:
-                ax.axvline(x=obs_date, color='lightblue', linestyle='--', linewidth=1, alpha=0.5)
-
-            # Formater l'axe des x pour afficher les dates de manière lisible
-            ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d'))
-            ax.xaxis.set_major_locator(mdates.AutoDateLocator())
-            plt.xticks(rotation=45)
-
-            ax.set_title(f'Monte Carlo Simulation for {stock.ticker}')
-            ax.set_xlabel('Time')
-            ax.set_ylabel('Process Value')
-            ax.grid(True, which='both', axis='y', linestyle='--', color='grey')
-            ax.grid(False, which='both', axis='x')
-            ax.legend()
-
-            plt.tight_layout()
-            self.figs.append(fig)  # Ajouter la figure à la liste des figures
-
-    def show_simulations(self):
-        # S'assurer que les figures ont été générées
-        if not hasattr(self, 'figs') or not self.figs:
-            self.plot_simulations()
-
-        for fig in self.figs:
-            plt.show()
-    
     def generate_payoffs(self):
         
         # Obtenir le nombre d'étapes et de simulations pour l'actif actuel
@@ -216,67 +168,6 @@ class Autocall:
         
         # Retourner le DataFrame du meilleur ou pire sous-jacent selon la stratégie
         return selected_df
-
-    def generate_payoffs2(self):
-        # Initialiser des listes pour stocker les DataFrames des payoffs et des payoffs actualisés pour chaque actif
-        payoffs_dataframes = []
-        discounted_payoffs_dataframes = []
-
-        # Parcourir chaque actif dans les simulations générées par Monte Carlo
-        for df in self.monte_carlo.simulations:
-            # Obtenir le nombre d'étapes et de simulations pour l'actif actuel
-            num_steps = len(self.monte_carlo.observation_dates)
-            num_simulations = df.shape[1]
-
-            # Initialiser des tableaux pour stocker les payoffs et les payoffs actualisés à chaque étape pour chaque simulation
-            payoffs_actif = np.zeros((num_steps, num_simulations))
-            discounted_payoffs_actif = np.zeros((num_steps, num_simulations))
-            df = pd.DataFrame(df)
-
-            # Parcourir chaque étape de simulation pour l'actif actuel
-            for step, time_step in enumerate(self.monte_carlo.observation_dates):
-
-                total_payment, no_redemption_condition = self.payoff_by_step(df,step,time_step)
-
-                # Stocker le paiement total et le paiement total actualisé à l'étape courante
-                payoffs_actif[step, :] = total_payment
-                discount = self.discount_factor(step, num_steps)
-                discounted_payoffs_actif[step, :] = (total_payment * discount)
-
-            # --------------------------------------------------------------------------------------------------------------------------------
-            # Part put barrière
-            filter_df = df.loc[self.monte_carlo.observation_dates]
-            # Je regarde le plus petit ratio de prix sur toutes les observations dates
-            initial_prices = df.iloc[0].values
-            min_price_ratios = filter_df.min(axis=0) / initial_prices
-            # Si le plus petit des ratios est inférieur à la barrière put alors cette barrière a été franchit
-            put_condition = min_price_ratios <= self.put_barrier
-            final_price_ratios = filter_df.iloc[-1].values / initial_prices
-
-            # Boucle sur toutes les simulations
-            for i in range(len(no_redemption_condition)):
-                # Si il n'y a pas eu déjà de redemption, que le barrière put a au moins été franchit une fois et que le dernier prix est inférieur au prix initial alors il faut imputer la perte
-                if no_redemption_condition[i] and put_condition[i] and (final_price_ratios[i] < 1):
-                    # J'annule tous les paiements de coupons précédents
-                    payoffs_actif[:, i] = discounted_payoffs_actif[:, i] = 0
-                    # Inputer la perte sur le dernier payoff
-                    payoffs_actif[-1, i] = self.nominal * final_price_ratios[i]
-
-                    discount = self.discount_factor(num_steps, num_steps)
-                    discounted_payoffs_actif[-1, i] = (payoffs_actif[-1, i] * discount)
-            # --------------------------------------------------------------------------------------------------------------------------------
-
-            # Créer des DataFrames pour les payoffs et les payoffs actualisés et les ajouter aux listes
-            df_payoffs = pd.DataFrame(payoffs_actif, index=self.monte_carlo.observation_dates,
-                                      columns=[f'Simulation {sim + 1}' for sim in range(num_simulations)])
-            df_discounted_payoffs = pd.DataFrame(discounted_payoffs_actif, index=self.monte_carlo.observation_dates,
-                                                 columns=[f'Simulation {sim + 1}' for sim in range(num_simulations)])
-
-            payoffs_dataframes.append(df_payoffs)
-            discounted_payoffs_dataframes.append(df_discounted_payoffs)
-
-        # Retourner les listes des DataFrames des payoffs et des payoffs actualisés
-        return payoffs_dataframes, discounted_payoffs_dataframes
     
 
     def calculate_average_present_value(self):
@@ -286,21 +177,3 @@ class Autocall:
         average_price =  total_discounted.mean()  # Calculate the mean across all simulations for the current asset
         self.average_price = average_price / self.nominal * 100
 
-    '''def print_payoffs_dataframes(self):
-            """
-            Affiche les DataFrames des payoffs pour chaque actif, utilisant le nom de l'actif.
-            """
-            for i, (df, stock) in enumerate(zip(self.payoffs, self.monte_carlo.stocks)):
-                print(f"Payoffs DataFrame for {stock.ticker}:")  # Utilisation de `name` comme identifiant
-                print(df)'''
-
-
-    '''def print_average_present_values(self):
-        """Affiche les valeurs présentes moyennes calculées pour chaque actif et la moyenne globale."""
-        if self.average_price is None or self.overall_average is None:
-            self.calculate_average_present_value()
-
-        for stock, value in zip(self.monte_carlo.stocks, self.average_price):
-            print(f"Prix moyen final pour {stock.ticker}: {value:.2f} €")  # Utilisation de `stock.name`
-
-        print(f"Prix moyen final sur tous les actifs: {self.overall_average:.2f} €")'''
