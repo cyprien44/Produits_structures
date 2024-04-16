@@ -172,8 +172,35 @@ class Autocall:
 
     def calculate_average_present_value(self):
         """Calcule la valeur présente moyenne pour chaque actif et la moyenne globale."""
-
         total_discounted = self.payoffs_discount.sum(axis=0)  # Sum along rows to get the sum of all discount flows for each simulation
         average_price =  total_discounted.mean()  # Calculate the mean across all simulations for the current asset
         self.average_price = average_price / self.nominal * 100
+
+    def print_average_present_values(self):
+        """Affiche les valeurs présentes moyennes calculées pour chaque actif et la moyenne globale."""
+        if self.average_price is None or self.overall_average is None:
+            self.calculate_average_present_value()
+
+        for stock, value in zip(self.monte_carlo.stocks, self.average_price):
+            print(f"Prix moyen final pour {stock.ticker}: {value:.2f} €")  # Utilisation de `stock.name`
+
+        print(f"Prix moyen final sur tous les actifs: {self.overall_average:.2f} €")
+
+    def calculate_autocall_probabilities(self):
+        autocall_occurrences = [0] * len(self.monte_carlo.observation_dates)
+        num_simulations = self.monte_carlo.simulations[0].shape[1]
+
+        for step, time_step in enumerate(self.monte_carlo.observation_dates):
+            for df in self.monte_carlo.simulations:
+                current_prices = df.loc[time_step].values
+                initial_prices = df.iloc[0].values
+                price_ratios = current_prices / initial_prices
+                autocall_condition = price_ratios >= self.autocall_barrier
+                autocall_occurrences[step] += np.sum(autocall_condition)
+
+        autocall_probabilities = [occ / num_simulations for occ in autocall_occurrences]
+        autocall_probabilities_dict = {date.strftime('%Y-%m-%d'): prob for date, prob in
+                                       zip(self.monte_carlo.observation_dates, autocall_probabilities)}
+
+        return autocall_probabilities_dict
 

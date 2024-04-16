@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import streamlit as st
 import pandas as pd
 import matplotlib.dates as mdates
-from matplotlib import cm
 import plotly.graph_objects as go
 
 def plot_volatility_surface_streamlit(stocks_list):
@@ -24,22 +23,6 @@ def plot_volatility_surface_streamlit(stocks_list):
                           margin=dict(l=65, r=50, b=65, t=90))
 
         st.plotly_chart(fig)
-
-def show_montecarlo_simulations(sim):
-    num_rows = sim.stocks_nb
-    num_cols = 1
-
-    plt.figure(figsize=(20, 30))
-
-    # Parcourir chaque sous-jacent
-    for i, prices in enumerate(sim.simulations):
-        plt.subplot(num_rows, num_cols, i + 1)
-        for path in prices:
-            plt.plot(path)
-        plt.title(f'Chemins de prix simulés pour {sim.stocks[i].ticker}')
-
-    st.pyplot(plt)
-    plt.clf()
 
 
 def plot_simulations_streamlit(autocall):

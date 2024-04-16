@@ -3,7 +3,7 @@ import pandas as pd
 from backend.monte_carlo import MonteCarlo
 from backend.models import Autocall
 from backend.data.stock_data import StockData
-from frontend.display import plot_volatility_surface_streamlit, show_montecarlo_simulations, plot_simulations_streamlit
+from frontend.display import plot_volatility_surface_streamlit, plot_simulations_streamlit
 
 st.title("Simulation de produits autocallables")
 
@@ -12,7 +12,7 @@ start_date = st.date_input("Date de début", pd.to_datetime("2024-03-01"))
 end_date = st.date_input("Date de fin", pd.to_datetime("2025-03-01"))
 
 # Vérification que la date de fin est postérieure à la date de début
-if start_date >= end_date:
+if start_date > end_date:
     st.error("La date de fin doit être postérieure à la date de début.")
 else:
 
@@ -22,7 +22,7 @@ else:
     "Apple": "AAPL US Equity",
     "Microsoft": "MSFT US Equity",
     "Google": "GOOGL US Equity",
-}
+    }
 
     # Liste prédéfinie des sous-jacents disponibles pour la sélection
 
@@ -67,7 +67,6 @@ else:
     )
         seed = st.number_input("Seed ", value=24, format="%d", key='seed')
         show_volatility = st.checkbox("Afficher les surfaces de volatilité implicite des sous-jacents")
-        show_simulations = st.checkbox("Afficher les simulations de Monte Carlo")
 
     # Bouton de simulation au centre
     st.markdown("""
@@ -108,9 +107,6 @@ else:
                     seed=seed,
                     observation_frequency=observation_frequency)
 
-        if show_simulations:
-            show_montecarlo_simulations(monte_carlo)
-
         autocall = Autocall(monte_carlo=monte_carlo,
                             strat = selected_strat,
                             nominal=nominal,
@@ -122,6 +118,7 @@ else:
         plot_simulations_streamlit(autocall)
 
         autocall.calculate_average_present_value()
+        probas = autocall.calculate_autocall_probabilities()
 
         st.markdown("---")
         
